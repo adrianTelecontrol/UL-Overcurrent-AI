@@ -37,8 +37,53 @@
 
 #define SDRAM_APP_START_ADDRESS 0x60000000
 #define SDRAM_APP_END_ADDRESS 0x61FFFFFF
+#define SDRAM_DEFAULT_REFRESH 234U
+
+volatile HAL_SDRAM_Status_e g_eSDRAMStatus = HAL_SDRAM_STATUS_NOT_TESTED;
+volatile uint32_t g_ui32SDRAMFailAddress = 0;
+volatile uint16_t g_ui16SDRAMExpected = 0;
+volatile uint16_t g_ui16SDRAMObserved = 0;
 
 // static const char TASK_NAME[] = "SDRAM_HAL";
+
+static void HAL_SDRAM_ClearFailure(void) {
+  g_ui32SDRAMFailAddress = 0;
+  g_ui16SDRAMExpected = 0;
+  g_ui16SDRAMObserved = 0;
+}
+
+static bool HAL_SDRAM_TestHalfword(uint32_t ui32Address, uint16_t ui16Pattern) {
+  uint16_t ui16Observed;
+
+  HWREGH(ui32Address) = ui16Pattern;
+  ui16Observed = HWREGH(ui32Address);
+
+  if (ui16Observed != ui16Pattern) {
+    g_ui32SDRAMFailAddress = ui32Address;
+    g_ui16SDRAMExpected = ui16Pattern;
+    g_ui16SDRAMObserved = ui16Observed;
+    return false;
+  }
+
+  return true;
+}
+
+bool HAL_SDRAM_RunSelfTest(void) {
+  HAL_SDRAM_ClearFailure();
+
+  if (!HAL_SDRAM_TestHalfword(SDRAM_APP_START_ADDRESS, 0xABCD) ||
+      !HAL_SDRAM_TestHalfword(SDRAM_APP_START_ADDRESS + 0x2, 0x1234) ||
+      !HAL_SDRAM_TestHalfword(SDRAM_APP_END_ADDRESS - 0x3, 0xDCBA) ||
+      !HAL_SDRAM_TestHalfword(SDRAM_APP_END_ADDRESS - 0x1, 0x4321)) {
+    g_eSDRAMStatus = HAL_SDRAM_STATUS_PATTERN_FAILED;
+    return false;
+  }
+
+  g_eSDRAMStatus = HAL_SDRAM_STATUS_OK;
+  return true;
+}
+
+HAL_SDRAM_Status_e HAL_SDRAM_GetStatus(void) { return g_eSDRAMStatus; }
 
 
 int HAL_SDRAM_ConfigureEPI(void) {
@@ -123,58 +168,39 @@ int HAL_SDRAM_ConfigureEPI(void) {
   GPIOPadConfigSet(GPIO_PORTP_BASE, EPI_PORTP_PINS, ui32Strength, ui32PinType);
 
   //
-  // Set the EPI clock to half the system clock.
+  // Set the EPI clock to one sixth the system clock.
   //
   EPIDividerSet(EPI0_BASE, 4);
 
   //
-  // Sets the usage mode of the EPI module.  For this example we will use
-  // the SDRAM mode to talk to the external 64MB SDRAM daughter card.
+  // Sets the usage mode of the EPI module.
   //
   EPIModeSet(EPI0_BASE, EPI_MODE_SDRAM);
 
   //
-  // Configure the SDRAM mode.  We configure the SDRAM according to our core
-  // clock frequency.  We will use the normal (or full power) operating
-  // state which means we will not use the low power self-refresh state.
-  // Set the SDRAM size to 64MB with a refresh interval of 468 clock ticks.
+  // Configure the SDRAM mode.  This board uses a 512 Mbit SDRAM with the
+  // EPI clock in the 15-30 MHz band.
   //
-  // DO NOT CHANGE UI32REFRESH VALUE!!!!!!!!!!!!!!!!!!!
   EPIConfigSDRAMSet(EPI0_BASE,
                     (EPI_SDRAM_CORE_FREQ_15_30 | EPI_SDRAM_FULL_POWER |
                      EPI_SDRAM_SIZE_512MBIT),
-                    234);
+                    SDRAM_DEFAULT_REFRESH);
 
   //
-  // Set the address map.  The EPI0 is mapped from 0x60000000 to 0x01FFFFFF.
-  // For this example, we will start from a base address of 0x60000000 with
-  // a size of 256MB.  Although our SDRAM is only 64MB, there is no 64MB
-  // aperture option so we pick the next larger size.
+  // Map the EPI SDRAM aperture at 0x60000000.
   //
   EPIAddressMapSet(EPI0_BASE, EPI_ADDR_RAM_SIZE_256MB | EPI_ADDR_RAM_BASE_6);
 
   //
-  // Wait for the SDRAM wake-up to complete by polling the SDRAM
-  // initialization sequence bit.  This bit is true when the SDRAM interface
-  // is going through the initialization and false when the SDRAM interface
-  // it is not in a wake-up period.
+  // Wait for the SDRAM wake-up sequence to complete.
   //
   while (HWREG(EPI0_BASE + EPI_O_STAT) & EPI_STAT_INITSEQ) {
   }
 
   //
-  // Write to the first 2 and last 2 address of the SDRAM card.  Since the
-  // SDRAM card is word addressable, we will write words.
+  // Run a small read/write sanity check before the heap uses SDRAM.
   //
-  HWREGH(SDRAM_APP_START_ADDRESS) = 0xabcd;
-  HWREGH(SDRAM_APP_START_ADDRESS + 0x2) = 0x1234;
-  HWREGH(SDRAM_APP_END_ADDRESS - 0x3) = 0xdcba;
-  HWREGH(SDRAM_APP_END_ADDRESS - 0x1) = 0x4321;
-
-  if ((HWREGH(SDRAM_APP_START_ADDRESS) == 0xabcd) &&
-      (HWREGH(SDRAM_APP_START_ADDRESS + 0x2) == 0x1234) &&
-      (HWREGH(SDRAM_APP_END_ADDRESS - 0x3) == 0xdcba) &&
-      (HWREGH(SDRAM_APP_END_ADDRESS - 0x1) == 0x4321)) {
+  if (HAL_SDRAM_RunSelfTest()) {
     //
     // Read and write operations were successful.  Return with no errors.
     //

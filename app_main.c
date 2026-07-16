@@ -60,6 +60,10 @@ const char *FIRMWARE_VER = "Firmware 1.0.0";
 const uint32_t g_ui32SysClock = 120E6;
 
 static const char TASK_NAME[] = "main_task";
+volatile uint32_t g_ui32AppFatalErrorCode = 0;
+
+#define APP_FATAL_SDRAM 1U
+#define APP_FATAL_RENDER_INIT 2U
 
 #ifdef DEBUG
 void __error__() {}
@@ -89,9 +93,19 @@ void ConfigureUART(void) {
   UARTStdioConfig(0, 115200, g_ui32SysClock);
 }
 
+static void App_FatalHalt(uint32_t ui32ErrorCode) {
+  g_ui32AppFatalErrorCode = ui32ErrorCode;
+  while (1) {
+  }
+}
+
 int main(void) {
   	// Enable all the ports
   	PinoutSet(false, false);
+
+	if (!HAL_SDRAM_RunSelfTest()) {
+		App_FatalHalt(APP_FATAL_SDRAM);
+	}
 
 	// The SysTick is a requirement for the uSD card
   	MAP_SysTickPeriodSet(g_ui32SysClock / 1000);
@@ -127,7 +141,9 @@ int main(void) {
 	}
 
 	// Init graphics engine
-	Render_Init(LCD_WIDTH, LCD_HEIGHT);
+	if (!Render_Init(LCD_WIDTH, LCD_HEIGHT)) {
+		App_FatalHalt(APP_FATAL_RENDER_INIT);
+	}
 
 	// Init FT81x SPI communication
   	HAL_TFT_SPI_Init();
@@ -150,7 +166,7 @@ int main(void) {
   	GestureEngine_CalibrateScreen();
 
 	// The DWT will be our clock source
-  	StartCycleCounter(); 
+  	//StartCycleCounter(); 
 
 	// Initialize the UI theme
 	// This is done in two steps to divide the loading times
