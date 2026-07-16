@@ -1,0 +1,4 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Always   # or UseTab: ForIndentation if you want real tabs

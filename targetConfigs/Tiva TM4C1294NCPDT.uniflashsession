@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><PartNumber id=""><Core name="CORTEX_M4_0"><DebugProperties>&lt;?xml version="1.0" encoding="UTF-8" standalone="no" ?&gt;
+&lt;PropertyValues&gt;
+
+  &lt;property id="VerifyAfterProgramLoad"&gt;
+    &lt;curValue&gt;Full verification&lt;/curValue&gt;
+  &lt;/property&gt;
+
+  &lt;property id="AutoRunToLabelOnRestart"&gt;
+    &lt;curValue&gt;0&lt;/curValue&gt;
+  &lt;/property&gt;
+
+  &lt;property id="FlashEraseType"&gt;
+    &lt;curValue&gt;Entire Flash&lt;/curValue&gt;
+  &lt;/property&gt;
+
+  &lt;property id="FlashEraseEndAddr"&gt;
+    &lt;curValue&gt;60000&lt;/curValue&gt;
+  &lt;/property&gt;
+
+  &lt;property id="FlashUserRegister0Input"&gt;
+    &lt;curValue&gt;455443&lt;/curValue&gt;
+  &lt;/property&gt;
+
+  &lt;property id="FlashDebugPortUnlockChoice"&gt;
+    &lt;curValue&gt;Fury, DustDevil, and Blizzard Classes&lt;/curValue&gt;
+  &lt;/property&gt;
+
+&lt;/PropertyValues&gt;
+</DebugProperties><FilePaths/></Core></PartNumber>

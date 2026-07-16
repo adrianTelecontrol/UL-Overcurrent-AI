@@ -1,0 +1,34 @@
+# Code Composer Studio build outputs
+Debug/
+Release/
+*.obj
+*.d
+*.d_raw
+*.out
+*.bin
+*.map
+*_linkInfo.xml
+ccsObjs.opt
+makefile
+objects.mk
+sources.mk
+subdir_rules.mk
+subdir_vars.mk
+
+# CCS local/runtime metadata
+.metadata/
+.recommenders/
+*.launches_backup
+*.tmp
+
+# Logs and transient files
+*.log
+*.bak
+*.orig
+*.swp
+Thumbs.db
+desktop.ini
+
+# Local tool/cache folders
+.agents/
+.codex/
