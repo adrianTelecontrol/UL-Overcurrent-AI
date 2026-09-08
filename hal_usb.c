@@ -38,10 +38,12 @@ static uint8_t g_pHCDPool[HCD_MEMORY_SIZE]; // Memoria de trabajo del controlado
 // Instancia global del Mass Storage Class (usada por fat_usbmsc.c)
 tUSBHMSCInstance *g_psMSCInstance = NULL;
 
+static volatile bool g_bUSBMSCOpen = false;
 static volatile bool g_bUSBIsReady = false;
 // static const char *TAG = "HAL_USB";
 
 extern const uint32_t g_ui32SysClock;
+extern void USB_disk_invalidate(void);
 
 static FATFS g_sUSBFatFs;
 
@@ -56,11 +58,15 @@ void USBHCDEvents(void *pvData) {
 
     switch (pEventInfo->ui32Event) {
         case USB_EVENT_POWER_FAULT:
+            g_bUSBMSCOpen = false;
             g_bUSBIsReady = false;
+			USB_disk_invalidate();
 		    Event_Post(EVT_SYS_USB_POWER_FAULT, ( EventParam_t ){.ptr = NULL});
             break;
         case USB_EVENT_UNKNOWN_CONNECTED:
+            g_bUSBMSCOpen = false;
             g_bUSBIsReady = false;
+			USB_disk_invalidate();
 		    Event_Post(EVT_SYS_USB_UNKNOWN_DEVICE, ( EventParam_t ){.ptr = NULL});
             break;
         default:
@@ -75,7 +81,9 @@ void MSCCallback(tUSBHMSCInstance *ps32Instance, uint32_t ui32Event,
     {
     	case MSC_EVENT_OPEN:
     	{
-            g_bUSBIsReady = true;
+			g_bUSBMSCOpen = true;
+			g_bUSBIsReady = false;
+			USB_disk_invalidate();
             
             // Disparamos un evento para que la UI muestre un ícono de USB, por ejemplo
 			Event_Post(EVT_SYS_USB_CONNECTED, (EventParam_t ){.ptr = NULL});
@@ -84,7 +92,9 @@ void MSCCallback(tUSBHMSCInstance *ps32Instance, uint32_t ui32Event,
 
     	case MSC_EVENT_CLOSE:
     	{
-            g_bUSBIsReady = false;
+			g_bUSBMSCOpen = false;
+			g_bUSBIsReady = false;
+			USB_disk_invalidate();
             
             // Avisar a la GUI para que cambie el ícono o aborte transferencias
             // Event_Post(EVT_SYS_USB_DISCONNECTED, (EventParam_t){ .i32 = 0 });
@@ -124,6 +134,9 @@ bool HAL_USB_Init(void) {
     // Esperar a que los periféricos estén listos
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_USB0) || 
           !SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOQ));
+
+    g_bUSBMSCOpen = false;
+    g_bUSBIsReady = false;
 
     // 3. Configurar Pines Digitales de Control de Energía (EPEN, PFLT)
     // Para encender y monitorear el switch de 5V del USB Host
@@ -182,6 +195,35 @@ void HAL_USB_Task(void) {
 
 bool HAL_USB_IsReady(void) {
     return g_bUSBIsReady;
+}
+
+bool HAL_USB_IsPresent(void) {
+    return g_bUSBMSCOpen;
+}
+
+void HAL_USB_InvalidateStorageReady(void) {
+    g_bUSBIsReady = false;
+    USB_disk_invalidate();
+}
+
+bool HAL_USB_ProbeStorageReady(void) {
+    FRESULT result;
+
+    if (!g_bUSBMSCOpen) {
+        return false;
+    }
+    if (g_bUSBIsReady) {
+        return true;
+    }
+
+    result = FM_ProbeRoot(DRIVE_USB_ID);
+    if (result == FR_OK) {
+        g_bUSBIsReady = true;
+        return true;
+    }
+
+    HAL_USB_InvalidateStorageReady();
+    return false;
 }
 
 

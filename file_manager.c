@@ -708,6 +708,30 @@ bool FM_AppendLog(const uint8_t drive, const char *pcFilePath, const char *logTe
     return (res == FR_OK && bytesWritten == strlen(logText));
 }
 
+FRESULT FM_ProbeRoot(uint8_t drive) {
+    DIR dir;
+    FILINFO fileInfo;
+    const char *driveString = FM_getDriveString(drive);
+    char rootPath[4];
+    FRESULT result;
+
+    if (driveString == NULL ||
+        snprintf(rootPath, sizeof(rootPath), "%s/", driveString) >=
+            (int)sizeof(rootPath)) {
+        return FR_INVALID_DRIVE;
+    }
+
+    memset(&dir, 0, sizeof(dir));
+    memset(&fileInfo, 0, sizeof(fileInfo));
+    result = f_opendir(&dir, rootPath);
+    if (result != FR_OK) {
+        return result;
+    }
+
+    /* FatFs R0.09b has no f_closedir(). Reading forces real media access. */
+    return f_readdir(&dir, &fileInfo);
+}
+
 // =====================================================================
 // UTILIDADES (Directorios)
 // =====================================================================

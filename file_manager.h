@@ -76,6 +76,10 @@ bool FM_WriteFile(const uint8_t drive, const char *pcFilePath, const uint8_t *pD
 // Añade texto al final de un archivo (Ideal para Logs). Si no existe, lo crea.
 bool FM_AppendLog(const uint8_t drive, const char *pcFilePath, const char *logText);
 
+/* Read-only USB readiness probe. Forces FatFs initialization and a root
+ * directory read without modifying media. */
+FRESULT FM_ProbeRoot(uint8_t drive);
+
 // =====================================================================
 // UTILIDADES
 // =====================================================================

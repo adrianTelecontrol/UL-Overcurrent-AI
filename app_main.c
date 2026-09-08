@@ -100,6 +100,7 @@ static void App_FatalHalt(uint32_t ui32ErrorCode) {
 }
 
 int main(void) {
+	uint32_t ui32NextUSBProbeMs = 0U;
   	// Enable all the ports
   	PinoutSet(false, false);
 
@@ -228,6 +229,11 @@ int main(void) {
 		GestureEngine_Task();
 		// Handle the USB events
 		HAL_USB_Task();
+		if (HAL_USB_IsPresent() && !HAL_USB_IsReady() &&
+			(int32_t)(g_ui32MsTicks - ui32NextUSBProbeMs) >= 0) {
+			HAL_USB_ProbeStorageReady();
+			ui32NextUSBProbeMs = g_ui32MsTicks + 250U;
+		}
 		// Just for showcase and debug purpuses
 		//controlSimulatiorTask();
   	} 

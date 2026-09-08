@@ -4,11 +4,36 @@
 
 #include <fatfs/src/ff.h>
 
+#include "hal_usb.h"
+
+#define USB_WRITE_CHUNK_BYTES 128U
+
 // =========================================================================
 // VARIABLES PRIVADAS
 // =========================================================================
 static FIL g_logFile;
 static bool g_bIsLogging = false;
+
+static bool LogManager_WriteChunked(const char *data, uint32_t length) {
+    uint32_t offset = 0U;
+
+    while (offset < length) {
+        uint32_t chunk = length - offset;
+        UINT bytesWritten = 0U;
+        FRESULT result;
+
+        if (chunk > USB_WRITE_CHUNK_BYTES) {
+            chunk = USB_WRITE_CHUNK_BYTES;
+        }
+        result = f_write(&g_logFile, &data[offset], chunk, &bytesWritten);
+        if (result != FR_OK || bytesWritten != chunk) {
+            HAL_USB_InvalidateStorageReady();
+            return false;
+        }
+        offset += chunk;
+    }
+    return true;
+}
 
 // =========================================================================
 // IMPLEMENTACIÓN
@@ -17,6 +42,10 @@ static bool g_bIsLogging = false;
 bool LogManager_StartLog(const char *fileName) {
     if (g_bIsLogging) {
         return false; // Ya hay un log en curso
+    }
+
+    if (!HAL_USB_IsReady() && !HAL_USB_ProbeStorageReady()) {
+        return false;
     }
 
     // 1. Extraer la ruta del directorio del fileName
@@ -42,16 +71,17 @@ bool LogManager_StartLog(const char *fileName) {
 
     // 4. Escribir el encabezado del CSV
     const char *header = "Time[ms],V_Pri[V],V_Sec[V],I_Pri[A],I_Sec[A],T_ProbeMain[C],T_ProbeSec[C],T_TxPri[C],T_TxSec[C],T_CableA[C],T_CableB[C],T_CJC[C]\n";
-    UINT bytesWritten;
-    
-    res = f_write(&g_logFile, header, strlen(header), &bytesWritten);
-    if (res != FR_OK || bytesWritten < strlen(header)) {
+    if (!LogManager_WriteChunked(header, strlen(header))) {
         f_close(&g_logFile);
         return false;
     }
 
     // 5. Asegurar que el encabezado se guarda en el disco físico inmediatamente
-    f_sync(&g_logFile); 
+    if (f_sync(&g_logFile) != FR_OK) {
+        HAL_USB_InvalidateStorageReady();
+        f_close(&g_logFile);
+        return false;
+    }
     g_bIsLogging = true;
     
     return true;
@@ -79,17 +109,17 @@ bool LogManager_WriteRow(const LogDataRow_t *data) {
              data->tempCableB,
              data->tempCJC);
 
-    UINT bytesWritten;
-    FRESULT res = f_write(&g_logFile, buffer, strlen(buffer), &bytesWritten);
-    
-    if (res != FR_OK || bytesWritten < strlen(buffer)) {
+    if (!LogManager_WriteChunked(buffer, strlen(buffer))) {
         return false; // Error de escritura (ej. USB desconectada abruptamente)
     }
 
     // Sincronizar con el disco tras cada línea. 
     // Crucial para pruebas de larga duración o fallas destructivas.
-    f_sync(&g_logFile);
-    
+    if (f_sync(&g_logFile) != FR_OK) {
+        HAL_USB_InvalidateStorageReady();
+        return false;
+    }
+
     return true;
 }
 
@@ -135,11 +165,13 @@ bool LogManager_WriteSummary(const LogTestSummary_t *summary) {
     }
 
     // Escribir en la USB y forzar el guardado
-    UINT bytesWritten;
-    FRESULT res = f_write(&g_logFile, buffer, strlen(buffer), &bytesWritten);
-    f_sync(&g_logFile);
+    bool written = LogManager_WriteChunked(buffer, strlen(buffer));
+    if (f_sync(&g_logFile) != FR_OK) {
+        HAL_USB_InvalidateStorageReady();
+        return false;
+    }
 
-    return (res == FR_OK && bytesWritten == strlen(buffer));
+    return written;
 }
 
 void LogManager_StopLog(void) {

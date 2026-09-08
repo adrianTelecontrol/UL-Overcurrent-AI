@@ -14,6 +14,10 @@ bool HAL_USB_Init(void);
 // =====================================================================
 void HAL_USB_Task(void);
 
+bool HAL_USB_IsPresent(void);
+bool HAL_USB_ProbeStorageReady(void);
+void HAL_USB_InvalidateStorageReady(void);
+
 // =====================================================================
 // Retorna true si una memoria USB está insertada y lista para leer/escribir
 // =====================================================================
