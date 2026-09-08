@@ -11,6 +11,17 @@
 #include "bitmap_parser.h"
 #include "gui_core.h"
 
+#define FM_EVE_IMAGE_MAX_ASSETS 16
+#define FM_EVE_IMAGE_PATH_MAX 64
+
+#ifndef FM_EVE_RAMG_ASSET_START
+#define FM_EVE_RAMG_ASSET_START (768000UL + 200UL)
+#endif
+
+#ifndef FM_EVE_RAMG_ALIGNMENT
+#define FM_EVE_RAMG_ALIGNMENT 4UL
+#endif
+
 // =====================================================================
 // DEFINICIONES DE UNIDADES LÓGICAS
 // =====================================================================
@@ -22,6 +33,17 @@ typedef enum {
 	DRIVE_COUNT,
 } fm_drive_e;
 
+typedef struct {
+	bool bIsValid;
+	uint8_t drive;
+	char path[FM_EVE_IMAGE_PATH_MAX];
+	uint32_t ramgAddress;
+	uint32_t ramgSizeBytes;
+	uint32_t fileSizeBytes;
+	uint16_t width;
+	uint16_t height;
+} FM_EVEImageAsset_t;
+
 // =====================================================================
 // FUNCIONES DE LECTURA (Gráficos, Fuentes, Assets)
 // =====================================================================
@@ -31,7 +53,19 @@ int FM_FetchBitmap(const char *drive, const char *pcFilePath, BitmapHandler_t *p
 
 bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont,  uint16_t startChar, uint16_t endChar);
 
-bool FM_LoadEVEImage(const uint8_t drive, const char *pcFilePath, gfx_Image *img, uint32_t targetRamGAddr, uint32_t *fileSize);
+// Loads a PNG into EVE RAM_G and records its decoded address/size.
+// Pass targetRamGAddr = 0 to append after the last registered image.
+bool FM_LoadEVEImage(const uint8_t drive, const char *pcFilePath, gfx_Image *img, uint32_t targetRamGAddr, uint32_t *ramgSizeBytes);
+
+void FM_EVEImageRegistryReset(uint32_t ramgStartAddress);
+
+const FM_EVEImageAsset_t *FM_EVEImageFind(const uint8_t drive, const char *pcFilePath);
+
+const FM_EVEImageAsset_t *FM_EVEImageGet(uint8_t index);
+
+uint8_t FM_EVEImageGetCount(void);
+
+uint32_t FM_EVEImageGetNextRAMGAddress(void);
 
 // =====================================================================
 // FUNCIONES DE ESCRITURA (Data Logging)

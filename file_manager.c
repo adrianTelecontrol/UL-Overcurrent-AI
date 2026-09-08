@@ -11,6 +11,10 @@
 #define PATH_BUF_SIZE 100
 static const char TASK_NAME[] = "FILE_MANAGER";
 
+static FM_EVEImageAsset_t g_sEVEImageAssets[FM_EVE_IMAGE_MAX_ASSETS];
+static uint8_t g_ui8EVEImageAssetCount = 0;
+static uint32_t g_ui32NextEVEImageRAMG = FM_EVE_RAMG_ASSET_START;
+
 // Estructura para mapear códigos de error a texto
 typedef struct {
     FRESULT iFResult;
@@ -27,6 +31,120 @@ static const tFResultString g_sFResultStrings[] = {
     {FR_TIMEOUT, "FR_TIMEOUT"}, {FR_LOCKED, "FR_LOCKED"}, {FR_NOT_ENOUGH_CORE, "FR_NOT_ENOUGH_CORE"},
     {FR_TOO_MANY_OPEN_FILES, "FR_TOO_MANY_OPEN_FILES"}, {FR_INVALID_PARAMETER, "FR_INVALID_PARAMETER"}
 };
+
+static uint32_t FM_AlignRAMGAddress(uint32_t address) {
+    return (address + (FM_EVE_RAMG_ALIGNMENT - 1U)) &
+           ~(FM_EVE_RAMG_ALIGNMENT - 1U);
+}
+
+static void FM_ApplyEVEImageAssetToWidget(const FM_EVEImageAsset_t *asset,
+                                          gfx_Image *img) {
+    if (asset == NULL || img == NULL) {
+        return;
+    }
+
+    img->ramgAddress = asset->ramgAddress;
+    img->ramgSizeBytes = asset->ramgSizeBytes;
+    img->fileSizeBytes = asset->fileSizeBytes;
+    img->size.width = asset->width;
+    img->size.height = asset->height;
+
+    if (img->scale == 0U) {
+        img->scale = 1U;
+    }
+}
+
+void FM_EVEImageRegistryReset(uint32_t ramgStartAddress) {
+    uint8_t i = 0;
+
+    for (; i < FM_EVE_IMAGE_MAX_ASSETS; i++) {
+        memset(&g_sEVEImageAssets[i], 0, sizeof(g_sEVEImageAssets[i]));
+    }
+
+    g_ui8EVEImageAssetCount = 0;
+    g_ui32NextEVEImageRAMG =
+        FM_AlignRAMGAddress(ramgStartAddress == 0U
+                                ? FM_EVE_RAMG_ASSET_START
+                                : ramgStartAddress);
+}
+
+const FM_EVEImageAsset_t *FM_EVEImageFind(const uint8_t drive,
+                                          const char *pcFilePath) {
+    uint8_t i = 0;
+
+    if (pcFilePath == NULL) {
+        return NULL;
+    }
+
+    for (; i < g_ui8EVEImageAssetCount; i++) {
+        if (g_sEVEImageAssets[i].bIsValid &&
+            g_sEVEImageAssets[i].drive == drive &&
+            strcmp(g_sEVEImageAssets[i].path, pcFilePath) == 0) {
+            return &g_sEVEImageAssets[i];
+        }
+    }
+
+    return NULL;
+}
+
+const FM_EVEImageAsset_t *FM_EVEImageGet(uint8_t index) {
+    if (index >= g_ui8EVEImageAssetCount) {
+        return NULL;
+    }
+
+    return &g_sEVEImageAssets[index];
+}
+
+uint8_t FM_EVEImageGetCount(void) {
+    return g_ui8EVEImageAssetCount;
+}
+
+uint32_t FM_EVEImageGetNextRAMGAddress(void) {
+    return g_ui32NextEVEImageRAMG;
+}
+
+static bool FM_RegisterEVEImageAsset(const uint8_t drive,
+                                     const char *pcFilePath,
+                                     const gfx_Image *img) {
+    FM_EVEImageAsset_t *asset;
+    uint32_t ramgEnd;
+
+    if (pcFilePath == NULL || img == NULL || img->ramgSizeBytes == 0U) {
+        return false;
+    }
+
+    if (g_ui8EVEImageAssetCount >= FM_EVE_IMAGE_MAX_ASSETS) {
+        TIVA_LOGE(TASK_NAME, "EVE image registry is full");
+        return false;
+    }
+
+    ramgEnd = FM_AlignRAMGAddress(img->ramgAddress + img->ramgSizeBytes);
+    if (ramgEnd > RAM_G_SIZE) {
+        TIVA_LOGE(TASK_NAME, "EVE image exceeds RAM_G: end=%lu limit=%lu",
+                  ramgEnd, (uint32_t)RAM_G_SIZE);
+        return false;
+    }
+
+    asset = &g_sEVEImageAssets[g_ui8EVEImageAssetCount];
+    memset(asset, 0, sizeof(*asset));
+
+    asset->bIsValid = true;
+    asset->drive = drive;
+    strncpy(asset->path, pcFilePath, FM_EVE_IMAGE_PATH_MAX - 1U);
+    asset->path[FM_EVE_IMAGE_PATH_MAX - 1U] = '\0';
+    asset->ramgAddress = img->ramgAddress;
+    asset->ramgSizeBytes = img->ramgSizeBytes;
+    asset->fileSizeBytes = img->fileSizeBytes;
+    asset->width = img->size.width;
+    asset->height = img->size.height;
+
+    g_ui8EVEImageAssetCount++;
+    if (ramgEnd > g_ui32NextEVEImageRAMG) {
+        g_ui32NextEVEImageRAMG = ramgEnd;
+    }
+
+    return true;
+}
 
 const char* FM_StringFromFResult(FRESULT iFResult) {
     uint8_t ui8Idx;
@@ -45,155 +163,6 @@ const char* FM_getDriveString(uint8_t drive) {
 		default: return NULL;
 	}
 }
-
-#if 0
-int FM_cd(int argc, char *argv[]) {
-  	uint_fast8_t ui8Idx;
-  	FRESULT iFResult;
-
-  	// Copy the current working path into a temporary buffer so it can be
-  	// manipulated.
-  	strcpy(g_pcTmpBuf, g_pcCwdBuf);
-
-  	// If the first character is /, then this is a fully specified path, and it
-  	// should just be used as-is.
-  	if (argv[1][0] == '/') {
-  	  // Make sure the new path is not bigger than the cwd buffer.
-  	  if (strlen(argv[1]) + 1 > sizeof(g_pcCwdBuf)) {
-  	    TIVA_LOGE(TASK_NAME, "Resulting path name is too long\n");
-  	    return (0);
-  	  }
-
-  	  // If the new path name (in argv[1])  is not too long, then copy it
-  	  // into the temporary buffer so it can be checked.
-  	  else {
-  	    strncpy(g_pcTmpBuf, argv[1], sizeof(g_pcTmpBuf));
-  	  }
-  	}
-
-  	// If the argument is .. then attempt to remove the lowest level on the
-  	// CWD.
-  	else if (!strcmp(argv[1], "..")) {
-  	  // Get the index to the last character in the current path.
-  	  ui8Idx = strlen(g_pcTmpBuf) - 1;
-
-  	  // Back up from the end of the path name until a separator (/) is
-  	  // found, or until we bump up to the start of the path.
-  	  while ((g_pcTmpBuf[ui8Idx] != '/') && (ui8Idx > 1)) {
-  	    //
-  	    // Back up one character.
-  	    //
-  	    ui8Idx--;
-  	  }
-
-  	  // Now we are either at the lowest level separator in the current path,
-  	  // or at the beginning of the string (root).  So set the new end of
-  	  // string here, effectively removing that last part of the path.
-  	  g_pcTmpBuf[ui8Idx] = 0;
-  	}
-
-  	// Otherwise this is just a normal path name from the current directory,
-  	// and it needs to be appended to the current path.
-  	else {
-  	  // Test to make sure that when the new additional path is added on to
-  	  // the current path, there is room in the buffer for the full new path.
-  	  // It needs to include a new separator, and a trailing null character.
-  	  if (strlen(g_pcTmpBuf) + strlen(argv[1]) + 1 + 1 > sizeof(g_pcCwdBuf)) {
-  	    TIVA_LOGE(TASK_NAME, "Resulting path name is too long\n");
-  	    return (0);
-  	  }
-
-  	  // The new path is okay, so add the separator and then append the new
-  	  // directory to the path.
-  	  else {
-  	    // If not already at the root level, then append a /
-  	    if (strcmp(g_pcTmpBuf, "/")) {
-  	      strcat(g_pcTmpBuf, "/");
-  	    }
-
-  	    // Append the new directory to the path.
-  	    strcat(g_pcTmpBuf, argv[1]);
-  	  }
-  	}
-
-  	// At this point, a candidate new directory path is in chTmpBuf.  Try to
-  	// open it to make sure it is valid.
-  	iFResult = f_opendir(&g_sDirObject, g_pcTmpBuf);
-
-  	// If it can't be opened, then it is a bad path.  Inform the user and
-  	// return.
-  	if (iFResult != FR_OK) {
-  	  TIVA_LOGE(TASK_NAME, "cd: %s\n", g_pcTmpBuf);
-  	  return ((int)iFResult);
-  	}
-
-  	// Otherwise, it is a valid new path, so copy it into the CWD.
-  	else {
-  	  strncpy(g_pcCwdBuf, g_pcTmpBuf, sizeof(g_pcCwdBuf));
-  	}
-
-  	return (0);
-}
-#endif
-
-#if 0
-int SDSPI_pwd(int argc, char *argv[]) {
-  TIVA_LOGI(TASK_NAME, "Current directory: %s", g_pcCwdBuf);
-
-  return (0);
-}
-#endif
-
-#if 0
-int FM_cat(int argc, char *argv[]) {
-  	FRESULT iFResult;
-  	uint32_t ui32BytesRead;
-
-  	if (strlen(g_pcCwdBuf) + strlen(argv[1]) + 1 + 1 > sizeof(g_pcTmpBuf)) {
-  	  TIVA_LOGE(TASK_NAME, "Resulting path name is too long");
-  	  return (0);
-  	}
-
-  	strcpy(g_pcTmpBuf, g_pcCwdBuf);
-
-  	// If not already at the root level, then append a separator.
-  	if (strcmp("/", g_pcCwdBuf)) {
-  	  strcat(g_pcTmpBuf, "/");
-  	}
-
-  	// Now finally, append the file name to result in a fully specified file.
-  	strcat(g_pcTmpBuf, argv[1]);
-
-  	// Open the file for reading.
-  	iFResult = f_open(&g_sFileObject, g_pcTmpBuf, FA_READ);
-
-  	// If there was some problem opening the file, then return an error.
-  	if (iFResult != FR_OK) {
-  	  return ((int)iFResult);
-  	}
-
-  	do {
-  	  // Read a block of data from the file.  Read as much as can fit in the
-  	  // temporary buffer, including a space for the trailing null.
-  	  iFResult = f_read(&g_sFileObject, g_pcTmpBuf, sizeof(g_pcTmpBuf) - 1,
-  	                    (UINT *)&ui32BytesRead);
-
-  	  // If there was an error reading, then print a newline and return the
-  	  // error to the user.
-  	  if (iFResult != FR_OK) {
-  	    return ((int)iFResult);
-  	  }
-
-  	  // Null terminate the last block that was read to make it a null
-  	  // terminated string that can be used with printf.
-  	  g_pcTmpBuf[ui32BytesRead] = 0;
-
-  	  TIVA_LOGI(TASK_NAME, "%s", g_pcTmpBuf);
-  	} while (ui32BytesRead == sizeof(g_pcTmpBuf) - 1);
-
-  	return (0);
-}
-#endif
 
 int FM_FetchFile(const char *drive, const char *pcFilePath, uint8_t *pui32SDRAMBuff, uint32_t ui32BuffSize) {
     FRESULT iFResult;
@@ -497,7 +466,8 @@ bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont
     return true;
 }
 
-bool FM_LoadEVEImage(const uint8_t drive, const char *pcFilePath, gfx_Image *img, uint32_t targetRamGAddr, uint32_t *imgSize) {
+#if 0
+bool FM_LoadEVEImageLegacy(const uint8_t drive, const char *pcFilePath, gfx_Image *img, uint32_t targetRamGAddr, uint32_t *imgSize) {
 
     FIL file;
     UINT bytesRead;
@@ -549,6 +519,103 @@ bool FM_LoadEVEImage(const uint8_t drive, const char *pcFilePath, gfx_Image *img
     free(sdramBuffer);
 
     return success;
+}
+
+#endif
+
+bool FM_LoadEVEImage(const uint8_t drive, const char *pcFilePath,
+                     gfx_Image *img, uint32_t targetRamGAddr,
+                     uint32_t *ramgSizeBytes) {
+    FIL file;
+    UINT bytesRead = 0;
+    const FM_EVEImageAsset_t *cachedAsset;
+    gfx_Image loadedImage = {0};
+    gfx_Image *loadTarget = img != NULL ? img : &loadedImage;
+    FRESULT result;
+    uint32_t fileSize;
+    uint8_t *sdramBuffer;
+    bool success;
+
+	if(pcFilePath == NULL) return false;
+
+    cachedAsset = FM_EVEImageFind(drive, pcFilePath);
+    if (cachedAsset != NULL) {
+        FM_ApplyEVEImageAssetToWidget(cachedAsset, img);
+        if (ramgSizeBytes != NULL) {
+            *ramgSizeBytes = cachedAsset->ramgSizeBytes;
+        }
+        TIVA_LOGI(TASK_NAME, "Reusing EVE image: %s @ RAM_G 0x%08lx",
+                  pcFilePath, cachedAsset->ramgAddress);
+        return true;
+    }
+
+	char tempFilePath[50];	
+
+   const char *driveStr = FM_getDriveString(drive);
+	if(driveStr == NULL) {
+		TIVA_LOGE(TASK_NAME, "Drive specified was not found!");
+		return false;
+	}
+
+	snprintf(tempFilePath, sizeof(tempFilePath), "%s/%s", driveStr, pcFilePath);
+
+    TIVA_LOGI(TASK_NAME, "Image to load: %s", tempFilePath);
+
+    result = f_open(&file, tempFilePath, FA_READ);
+    if (result != FR_OK) {
+        TIVA_LOGE(TASK_NAME, "Image not found: %s (%s)", pcFilePath,
+                  FM_StringFromFResult(result));
+        return false;
+    }
+
+    fileSize = f_size(&file);
+    if (ramgSizeBytes != NULL) {
+        *ramgSizeBytes = 0;
+    }
+    
+    sdramBuffer = (uint8_t *)malloc(fileSize);
+    if (!sdramBuffer) {
+        f_close(&file);
+        TIVA_LOGE(TASK_NAME, "Failed to allocate SDRAM buffer for PNG");
+        return false;
+    }
+
+    result = f_read(&file, sdramBuffer, fileSize, &bytesRead);
+    f_close(&file);
+
+    if (result != FR_OK || bytesRead != fileSize) {
+        free(sdramBuffer);
+        TIVA_LOGE(TASK_NAME, "Image read failed: %s", pcFilePath);
+        return false;
+    }
+
+    if (targetRamGAddr == 0U) {
+        targetRamGAddr = g_ui32NextEVEImageRAMG;
+    }
+
+    success = gfx_ImageLoadPNG(loadTarget, sdramBuffer, fileSize,
+                               targetRamGAddr);
+
+    free(sdramBuffer);
+
+    if (!success) {
+        return false;
+    }
+
+    if (!FM_RegisterEVEImageAsset(drive, pcFilePath, loadTarget)) {
+        return false;
+    }
+
+    if (ramgSizeBytes != NULL) {
+        *ramgSizeBytes = loadTarget->ramgSizeBytes;
+    }
+
+    TIVA_LOGI(TASK_NAME,
+              "Loaded EVE image: %s @ RAM_G 0x%08lx, %ux%u, %lu bytes",
+              pcFilePath, loadTarget->ramgAddress, loadTarget->size.width,
+              loadTarget->size.height, loadTarget->ramgSizeBytes);
+
+    return true;
 }
 
 // =====================================================================

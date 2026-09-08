@@ -20,6 +20,7 @@
 
 #include "utils/uartstdio.h"
 
+#include "build_config.h"
 #include "gpu_ft81x.h"
 #include "FT8xx_params.h"
 #include "gui_core.h"
@@ -47,7 +48,6 @@
 
 #include "gui_theme.h"
 
-// #define ENABLE_SPLASH_SCR
 
 // Application specifics
 #define APP_VERSION_MAJOR 1
@@ -166,7 +166,7 @@ int main(void) {
   	GestureEngine_CalibrateScreen();
 
 	// The DWT will be our clock source
-  	//StartCycleCounter(); 
+  	StartCycleCounter(); 
 
 	// Initialize the UI theme
 	// This is done in two steps to divide the loading times

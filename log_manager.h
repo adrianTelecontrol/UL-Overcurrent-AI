@@ -34,6 +34,7 @@ typedef struct {
 
     // Parámetros dinámicos según el tipo de prueba
     float targetCurrent;         // Para FAULT
+    float presetVoltage;         // Para FAULT
     float targetTemp;            // Para CRUSH
     float maxCurrentReq;         // Para SEQUENCE
     uint16_t numSegments;        // Para SEQUENCE

@@ -50,10 +50,11 @@ static gfx_Label patternSubtitleData;
 // Callbacks
 static void onFaultCurrentBtnReleased(gfx_Button *btn) {
 	onGenericBtnRelease(btn);
-	ExperimentCfg_newFaultTest(UL_FAULT_DEFAULT_CURRENT, UL_FAULT_DEFAULT_DURATION_SEC);
+	ExperimentCfg_newFaultTest(UL_FAULT_DEFAULT_CURRENT, UL_FAULT_DEFAULT_DURATION_SEC, UL_FAULT_DEFAULT_PRESET_VOLTAGE);
 
 	Event_Post(EVT_SYS_FAULT_CFG_CURRENT, (EventParam_t){.f32 = UL_FAULT_DEFAULT_CURRENT});
 	Event_Post(EVT_SYS_FAULT_CFG_DURATION, (EventParam_t){.f32 = UL_FAULT_DEFAULT_DURATION_SEC});
+	Event_Post(EVT_SYS_FAULT_CFG_PRESET_VOLTAGE, (EventParam_t){.f32 = UL_FAULT_DEFAULT_PRESET_VOLTAGE});
 	Event_Post(EVT_SYS_SHOW_FAULT_CONFIG_FORM, (EventParam_t){.ptr = NULL});
 }
 

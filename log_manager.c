@@ -125,6 +125,7 @@ bool LogManager_WriteSummary(const LogTestSummary_t *summary) {
     // Datos Específicos
     if (summary->testType == 0) { // FAULT
         len += snprintf(buffer + len, sizeof(buffer) - len, "CORRIENTE_OBJETIVO_A,%.2f\n", summary->targetCurrent);
+        len += snprintf(buffer + len, sizeof(buffer) - len, "VOLTAJE_PRESET_V,%.2f\n", summary->presetVoltage);
     } else if (summary->testType == 1) { // CRUSH
         len += snprintf(buffer + len, sizeof(buffer) - len, "TEMPERATURA_OBJETIVO_C,%.2f\n", summary->targetTemp);
     } else if (summary->testType == 2) { // SEQUENCE

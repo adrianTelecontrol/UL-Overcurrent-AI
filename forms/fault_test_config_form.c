@@ -29,21 +29,25 @@ static gfx_GenericWidget cancelConfigWidget;
 // Etiquetas de Título de Caja
 static gfx_GenericWidget setCaliberLabelWidget;
 static gfx_GenericWidget setCurrentLabelWidget;
+static gfx_GenericWidget presetVoltageLabelWidget;
 static gfx_GenericWidget testDurationLabelWidget;
 
 // Fondos de Caja
 static gfx_GenericWidget setCaliberBoxWidget;
 static gfx_GenericWidget setCurrentBoxWidget;
+static gfx_GenericWidget presetVoltageBoxWidget;
 static gfx_GenericWidget testDurationBoxWidget;
 
 // Valores Dinámicos
 static gfx_GenericWidget setCaliberValueWidget;
 static gfx_GenericWidget setCurrentValueWidget;
+static gfx_GenericWidget presetVoltageValueWidget;
 static gfx_GenericWidget testDurationValueWidget;
 
 // Áreas Táctiles
 static gfx_GenericWidget caliberTouchWidget;
 static gfx_GenericWidget currentTouchWidget;
+static gfx_GenericWidget presetVoltageTouchWidget;
 static gfx_GenericWidget durationTouchWidget;
 
 // Nuevo: Botón Toggle de Resistencia
@@ -59,18 +63,22 @@ static gfx_Button cancelConfigData;
 
 static gfx_Label setCaliberLabelData;
 static gfx_Label setCurrentLabelData;
+static gfx_Label presetVoltageLabelData;
 static gfx_Label testDurationLabelData;
 
 static gfx_Rectangle setCaliberBoxData;
 static gfx_Rectangle setCurrentBoxData;
+static gfx_Rectangle presetVoltageBoxData;
 static gfx_Rectangle testDurationBoxData;
 
 static gfx_Label setCaliberValueData;
 static gfx_Label setCurrentValueData;
+static gfx_Label presetVoltageValueData;
 static gfx_Label testDurationValueData;
 
 static gfx_TouchArea caliberTouchAreaData;
 static gfx_TouchArea currentTouchAreaData;
+static gfx_TouchArea presetVoltageTouchAreaData;
 static gfx_TouchArea durationTouchAreaData;
 
 static gfx_Button resistanceToggleBtnData;
@@ -78,6 +86,7 @@ static gfx_Button resistanceToggleBtnData;
 // Buffers de texto y estado
 static char caliberValBuffer[8] = "0"; 
 static char currentValBuffer[8] = "450.0";
+static char presetVoltageBuffer[8] = "0.0";
 static char testDurationBuffer[6] = "4.0";
 static char curCaliber[8] = "0";
 static bool g_bIsHighResistance = false; // Estado del Toggle
@@ -89,6 +98,7 @@ static bool g_bIsHighResistance = false; // Estado del Toggle
 static void onStartTestReleasedEvent(gfx_Button *btn) {
     onGenericBtnRelease(btn);
     Event_Post(EVT_SYS_SHOW_TEST_CONFIRMATION, (EventParam_t){.ui32 = UL_TEST_FAULT});
+    // Event_Post(EVT_SYS_SHOW_VOLTAGE_PRESET_FORM, (EventParam_t){.ptr = NULL});
 }
 
 static void onCancelTestReleasedEvent(gfx_Button *btn) {
@@ -129,6 +139,11 @@ static void onCurrentTouchRelease(gfx_TouchArea *area) {
     Event_Post(EVT_SYS_NUMPAD_MOD_FAULT_CFG_CURRENT, (EventParam_t){.f32 = cfg.f32TargetCurrent});
 }
 
+static void onPresetVoltageTouchRelease(gfx_TouchArea *area) {
+    ul_fault_current_test_s cfg = ExperimentCfg_getCurrFaultCfg();
+    Event_Post(EVT_SYS_NUMPAD_MOD_FAULT_CFG_PRESET_VOLTAGE, (EventParam_t){.f32 = cfg.f32PresetVoltage});
+}
+
 static void onDurationTouchRelease(gfx_TouchArea *area) {
     ul_fault_current_test_s cfg = ExperimentCfg_getCurrFaultCfg();
     Event_Post(EVT_SYS_NUMPAD_MOD_FAULT_CFG_DURATION, (EventParam_t){.f32 = cfg.ui16Duration});
@@ -144,6 +159,11 @@ static void onFaultCaliberChanged(EventParam_t arg) {
 static void onFaultCurrentChanged(EventParam_t arg) {
     sprintf(currentValBuffer, "%.1f", arg.f32);
     setCurrentValueData.bIsDirty = true;
+}
+
+static void onFaultPresetVoltageChanged(EventParam_t arg) {
+    sprintf(presetVoltageBuffer, "%.1f", arg.f32);
+    presetVoltageValueData.bIsDirty = true;
 }
 
 static void onFaultDurationChanged(EventParam_t arg) {
@@ -180,13 +200,14 @@ void initFaultTestConfigForm(void) {
     formSubtitleWidget.eWidgetType = WD_TYPE_LABEL; formSubtitleWidget.pvWidget = &formSubtitleData;
 
     // --- CÁLCULO DE GEOMETRÍA A 3 COLUMNAS ---
-    uint16_t colWidth = LCD_WIDTH / 3.0f;
-    uint16_t boxWidth = colWidth * 0.85f; 
+    uint16_t colWidth = LCD_WIDTH / 4.0f;
+    uint16_t boxWidth = colWidth * 0.82f; 
     uint16_t boxHeight = 100;
     
     float box1_x = (colWidth - boxWidth) / 2.0f;
     float box2_x = colWidth + (colWidth - boxWidth) / 2.0f;
     float box3_x = (colWidth * 2.0f) + (colWidth - boxWidth) / 2.0f;
+    float box4_x = (colWidth * 3.0f) + (colWidth - boxWidth) / 2.0f;
     float box_y = formSubtitleData.pos.y + 65;
 
     // ==========================================
@@ -247,11 +268,37 @@ void initFaultTestConfigForm(void) {
     };
     setCurrentValueWidget.eWidgetType = WD_TYPE_LABEL; setCurrentValueWidget.pvWidget = &setCurrentValueData;
 
+    presetVoltageBoxData = (gfx_Rectangle){
+        .pos.x = box3_x, .pos.y = box_y, .dim.width = boxWidth, .dim.height = boxHeight,
+        .round = 6, .color = g_pCurrentTheme->palette.surface,
+    };
+    presetVoltageBoxWidget.eWidgetType = WD_TYPE_RECT; presetVoltageBoxWidget.pvWidget = &presetVoltageBoxData;
+
+    presetVoltageTouchAreaData = (gfx_TouchArea) {
+        .pos = presetVoltageBoxData.pos, .size = presetVoltageBoxData.dim, .onAreaTouchRelease = onPresetVoltageTouchRelease,
+    };
+    gfx_initRegTouch((void *)&presetVoltageTouchAreaData, WD_TYPE_TOUCH_AREA);
+    presetVoltageTouchWidget.eWidgetType = WD_TYPE_TOUCH_AREA; presetVoltageTouchWidget.pvWidget = &presetVoltageTouchAreaData;
+
+    presetVoltageLabelData = (gfx_Label) {
+        .text = "PRESET [V]",
+        .pos.x = presetVoltageBoxData.pos.x + boxWidth / 2, .pos.y = box_y - 15,
+        .typo = TYPO_CAPTION, .style = STYLE_TEXT_MUTED, .isVisible = true, .alignment = ALIGN_HCENTER,
+    };
+    presetVoltageLabelWidget.eWidgetType = WD_TYPE_LABEL; presetVoltageLabelWidget.pvWidget = &presetVoltageLabelData;
+
+    presetVoltageValueData = (gfx_Label) {
+        .text = presetVoltageBuffer,
+        .pos.x = presetVoltageBoxData.pos.x + boxWidth / 2, .pos.y = presetVoltageBoxData.pos.y + boxHeight / 2,
+        .typo = TYPO_H1, .style = STYLE_PRIMARY, .isVisible = true, .alignment = ALIGN_CENTER,
+    };
+    presetVoltageValueWidget.eWidgetType = WD_TYPE_LABEL; presetVoltageValueWidget.pvWidget = &presetVoltageValueData;
+
     // ==========================================
     // CAJA 3: DURACIÓN DEL ENSAYO
     // ==========================================
     testDurationBoxData = (gfx_Rectangle){
-        .pos.x = box3_x, .pos.y = box_y, .dim.width = boxWidth, .dim.height = boxHeight,
+        .pos.x = box4_x, .pos.y = box_y, .dim.width = boxWidth, .dim.height = boxHeight,
         .round = 6, .color = g_pCurrentTheme->palette.surface,
     };
     testDurationBoxWidget.eWidgetType = WD_TYPE_RECT; testDurationBoxWidget.pvWidget = &testDurationBoxData;
@@ -346,6 +393,11 @@ void initFaultTestConfigForm(void) {
     canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &setCurrentValueWidget);
     canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &currentTouchWidget);
 
+    canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &presetVoltageLabelWidget);
+    canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &presetVoltageBoxWidget);
+    canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &presetVoltageValueWidget);
+    canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &presetVoltageTouchWidget);
+
     // Insertar Caja 3 (Duración)
     canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &testDurationLabelWidget);
     canvasInsertAtTop(&g_sFaultTestConfigCanvas.psWidgets, &testDurationBoxWidget);
@@ -356,6 +408,7 @@ void initFaultTestConfigForm(void) {
     Event_Subscribe(EVT_SYS_FAULT_CFG_CALIBER, (EventHandler_fn)onFaultCaliberChanged);
     Event_Subscribe(EVT_SYS_FAULT_CFG_DURATION, (EventHandler_fn)onFaultDurationChanged);
     Event_Subscribe(EVT_SYS_FAULT_CFG_CURRENT, (EventHandler_fn)onFaultCurrentChanged);
+    Event_Subscribe(EVT_SYS_FAULT_CFG_PRESET_VOLTAGE, (EventHandler_fn)onFaultPresetVoltageChanged);
 
     g_i16FaultConfigFormIndex = FormManager_AddForm(&g_sFaultTestConfigCanvas);
 }

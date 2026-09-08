@@ -1,16 +1,14 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "UL_Overcurrent_v01",
-      "type": "ccs-debug",
-      "request": "launch",
-      "projectInfo": {
-        "name": "UL_Overcurrent_v01",
-        "resourceId": "/UL_Overcurrent_v01"
-      }
-    }
-  ]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "UL_Overcurrent_v01",
+            "type": "ccs-debug",
+            "request": "launch",
+            "projectInfo": {
+                "name": "UL_Overcurrent_v01",
+                "resourceId": "/UL_Overcurrent_v01"
+            }
+        }
+    ]
 }

@@ -179,6 +179,19 @@ static void onFaultCfgDuration(EventParam_t arg) {
 	g_eValueSubmitEvent = EVT_SYS_FAULT_CFG_SUBMIT_DURATION;
 }
 
+static void onFaultCfgPresetVoltage(EventParam_t arg) {
+    strcpy(valueLabelBuffer, "PRESET VOLTAJE SEC. [V]");
+
+    sprintf(digitBuffer, "%.1f", arg.f32);
+    digitLen = strlen(digitBuffer);
+    
+    displayLabelData.bIsDirty = true;
+    displayValueData.bIsDirty = true;
+
+	g_eFormCallback = EVT_SYS_SHOW_FAULT_CONFIG_FORM;
+	g_eValueSubmitEvent = EVT_SYS_FAULT_CFG_SUBMIT_PRESET_VOLTAGE;
+}
+
 static void onFaultCfgCaliber(EventParam_t arg) {
     strcpy(valueLabelBuffer, "CALIBRE [AWG]");
 
@@ -394,6 +407,7 @@ void initNumpadModifyValueForm(void) {
     // 6. EVENTOS Y REGISTRO DEL FORMULARIO
     Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_CURRENT, (EventHandler_fn)onFaultCfgCurrent);
     Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_DURATION, (EventHandler_fn)onFaultCfgDuration);
+    Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_PRESET_VOLTAGE, (EventHandler_fn)onFaultCfgPresetVoltage);
 	Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_CALIBER, (EventHandler_fn)onFaultCfgCaliber);
 
     Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_DURATION, (EventHandler_fn)onCrushCfgDuration);

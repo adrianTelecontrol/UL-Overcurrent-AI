@@ -6,6 +6,7 @@
 
 #define UL_FAULT_DEFAULT_DURATION_SEC	0.0f
 #define UL_FAULT_DEFAULT_CURRENT		0.0f
+#define UL_FAULT_DEFAULT_PRESET_VOLTAGE	0.0f
 #define UL_CRUSH_DEFAULT_DURATION_SEC	0.0f
 #define UL_CRUSH_DEFAULT_TEMP			0.0f
 
@@ -28,6 +29,7 @@ typedef enum
 typedef struct {
 	float f32TargetCurrent;
 	uint16_t ui16Duration;
+	float f32PresetVoltage;
 
 	bool isRunning;
 	bool bIsHighResistence;
@@ -96,7 +98,7 @@ bool ExperimentCfg_newSequenceTest(const char *filePath);
 bool ExperimentCfg_startSequenceTest(char *startTime, char *pcStartDate);
 bool ExperimentCfg_stopSequenceTest(char *endTime, char *endDate);
 
-bool ExperimentCfg_newFaultTest(uint16_t targetCurrent, uint16_t duration);
+bool ExperimentCfg_newFaultTest(uint16_t targetCurrent, uint16_t duration, float presetVoltage);
 bool ExperimentCfg_startFaultTest(char *startTime, char *pcStartDate);
 bool ExperimentCfg_endFaultTest(char *endTime, char *endDate);
 
@@ -109,7 +111,7 @@ ul_crush_test_s	ExperimentCfg_getCurrCrushCfg(void);
 const ul_sequence_profile_t* ExperimentCfg_getCurrSequenceCfg(void);
 bool ExperimentCfg_getSequenceSegment(uint16_t index, ul_sequence_segment_t *segment);
 void ExperimentCfg_generateSequencePoints(float *data, uint16_t size);
-void ExperimentCfg_SendStartCommand(uint8_t testType, uint16_t durationSec, float targetValue, bool isHighRes);
+void ExperimentCfg_SendStartCommand(uint8_t testType, uint16_t durationSec, float targetValue, bool isHighRes, float presetVoltage);
 void ExperimentCfg_SendStopCommand(void);
 
 void ExperimentCfg_init(void);

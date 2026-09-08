@@ -268,9 +268,9 @@ void initCommonWidgets(void) {
 		.scale = 1,
 	};
 
-	uint32_t fileSize = 0;
-	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_blk_corrected.png", &tcBlkLogoImgData, EVE_FREE_RAMG_START, &fileSize)) {
-		TIVA_LOGE(TAG, "Fallo al cargar logo_tc.png en EVE");
+	FM_EVEImageRegistryReset(EVE_FREE_RAMG_START);
+	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_blk_corrected.png", &tcBlkLogoImgData, 0, NULL)) {
+		TIVA_LOGE(TAG, "Fallo al cargar logo_blk_corrected.png en EVE");
 	}
 	tcBlkLogoImgWidget.eWidgetType = WD_TYPE_IMAGE;
 	tcBlkLogoImgWidget.pvWidget = (void *)&tcBlkLogoImgData;
@@ -282,8 +282,7 @@ void initCommonWidgets(void) {
 		.scale = 1,
 	};
 
-	uint32_t dummy = 0;
-	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_tc.png", &tcLogoImgData, EVE_FREE_RAMG_START + 8 *  fileSize, &dummy)) {
+	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_tc.png", &tcLogoImgData, 0, NULL)) {
 		TIVA_LOGE(TAG, "Fallo al cargar logo_tc.png en EVE");
 	}
 	tcLogoImgWidget.eWidgetType = WD_TYPE_IMAGE;

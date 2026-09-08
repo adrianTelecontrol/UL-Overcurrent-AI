@@ -16,6 +16,18 @@ static ul_fault_current_test_s g_sCurrentFaultTest = {0};
 static ul_crush_test_s g_sCurrentCrashTest = {0};
 static ul_sequence_profile_t g_sCurrentSequenceTest = {0};
 
+#define CAN_TX_WAIT_SPINS 100000UL
+
+static bool ExperimentCfg_WaitForCanTxReady(void) {
+	uint32_t guard = CAN_TX_WAIT_SPINS;
+
+	while (HAL_CAN_IsTxBusy() && guard > 0U) {
+		guard--;
+	}
+
+	return guard > 0U;
+}
+
 // Calbacks
 static void onFaultCurrentSubmitted(EventParam_t arg) {
 	// TODO Check limits
@@ -29,6 +41,13 @@ static void onFaultDurationSubmitted(EventParam_t arg) {
 	g_sCurrentFaultTest.ui16Duration = arg.f32;
 	// Update all listeners about the change
 	Event_Post(EVT_SYS_FAULT_CFG_DURATION, (EventParam_t){.f32 = g_sCurrentFaultTest.ui16Duration});
+}
+
+static void onFaultPresetVoltageSubmitted(EventParam_t arg) {
+	// TODO Check limits
+	g_sCurrentFaultTest.f32PresetVoltage = arg.f32;
+	// Update all listeners about the change
+	Event_Post(EVT_SYS_FAULT_CFG_PRESET_VOLTAGE, (EventParam_t){.f32 = g_sCurrentFaultTest.f32PresetVoltage});
 }
 
 static void onFaultCaliberSubmitted(EventParam_t arg) {
@@ -78,11 +97,12 @@ static void onProfileCaliberSubmitted(EventParam_t arg) {
 	Event_Post(EVT_SYS_PROFILE_CFG_CALIBER, ( EventParam_t ){.str = g_sCurrentSequenceTest.pcCaliber});
 }
 
-bool ExperimentCfg_newFaultTest(uint16_t targetCurrent, uint16_t duration) {
+bool ExperimentCfg_newFaultTest(uint16_t targetCurrent, uint16_t duration, float presetVoltage) {
 	// g_sCurrentFaultTest.isRunning = true;
 	// Its probably good idea to check if the test is already running
 	g_sCurrentFaultTest.f32TargetCurrent = targetCurrent;
 	g_sCurrentFaultTest.ui16Duration = duration;
+	g_sCurrentFaultTest.f32PresetVoltage = presetVoltage;
 	g_sCurrentFaultTest.isRunning = false;
 	g_sCurrentFaultTest.bIsHighResistence = false;
 	memset(g_sCurrentFaultTest.pcCaliber, 0, sizeof(g_sCurrentFaultTest.pcCaliber));
@@ -140,6 +160,7 @@ ul_fault_current_test_s ExperimentCfg_getCurrFaultCfg(void) {
 void ExperimentCfg_init(void) {
 	Event_Subscribe(EVT_SYS_FAULT_CFG_SUBMIT_CURRENT, (EventHandler_fn)onFaultCurrentSubmitted);
 	Event_Subscribe(EVT_SYS_FAULT_CFG_SUBMIT_DURATION, (EventHandler_fn)onFaultDurationSubmitted);
+	Event_Subscribe(EVT_SYS_FAULT_CFG_SUBMIT_PRESET_VOLTAGE, (EventHandler_fn)onFaultPresetVoltageSubmitted);
 	Event_Subscribe(EVT_SYS_FAULT_CFG_SUBMIT_CALIBER, (EventHandler_fn)onFaultCaliberSubmitted);
 	Event_Subscribe(EVT_SYS_FAULT_CFG_SUBMIT_IS_HIGH_RESISTENCE, (EventHandler_fn)onFaultResistanceSubmitted);
 
@@ -413,9 +434,35 @@ void ExperimentCfg_generateSequencePoints(float *data, uint16_t size) {
 }
 
 // Función para enviar el comando de arranque a la instrumentación
-void ExperimentCfg_SendStartCommand(uint8_t testType, uint16_t durationSec, float targetValue, bool isHighRes) {
+void ExperimentCfg_SendStartCommand(uint8_t testType, uint16_t durationSec, float targetValue, bool isHighRes, float presetVoltage) {
     union { float f; uint8_t bytes[4]; } targetData;
     targetData.f = targetValue;
+
+    if (!ExperimentCfg_WaitForCanTxReady()) {
+        return;
+    }
+
+    if (testType == UL_TEST_FAULT) {
+        union { float f; uint8_t bytes[4]; } presetData;
+        presetData.f = presetVoltage;
+
+        HAL_CAN_Msg_t presetMsg;
+        presetMsg.id = CAN_ID_REQ_VARIAC_SET_VOLTAGE;
+        presetMsg.isExtended = false;
+        presetMsg.length = sizeof(float);
+        presetMsg.data[0] = presetData.bytes[0];
+        presetMsg.data[1] = presetData.bytes[1];
+        presetMsg.data[2] = presetData.bytes[2];
+        presetMsg.data[3] = presetData.bytes[3];
+
+        if (!HAL_CAN_Transmit(&presetMsg)) {
+            return;
+        }
+
+        if (!ExperimentCfg_WaitForCanTxReady()) {
+            return;
+        }
+    }
 
     HAL_CAN_Msg_t startMsg;
     startMsg.id = CAN_ID_REQ_START_TEST;
@@ -431,6 +478,10 @@ void ExperimentCfg_SendStartCommand(uint8_t testType, uint16_t durationSec, floa
     startMsg.data[6] = targetData.bytes[3];
     startMsg.data[7] = isHighRes ? 1 : 0;         // Flags adicionales
     
+    if (!ExperimentCfg_WaitForCanTxReady()) {
+        return;
+    }
+
     HAL_CAN_Transmit(&startMsg);
 }
 

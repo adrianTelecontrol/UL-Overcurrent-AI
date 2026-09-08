@@ -56,6 +56,7 @@
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_20.2.compilerID.OPT_LEVEL.2088159492" superClass="com.ti.ccstudio.buildDefinitions.TMS470_20.2.compilerID.OPT_LEVEL" value="com.ti.ccstudio.buildDefinitions.TMS470_20.2.compilerID.OPT_LEVEL.2" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_20.2.compilerID.INCLUDE_PATH.1779146499" superClass="com.ti.ccstudio.buildDefinitions.TMS470_20.2.compilerID.INCLUDE_PATH" valueType="includePath">
                                     <listOptionValue value="${PROJECT_ROOT}"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/third_party/hybrid_graphics_engine/engine/tm4c1294_ft812"/>
                                     <listOptionValue value="${COM_TI_TM4C_INSTALL_DIR}"/>
                                     <listOptionValue value="${COM_TI_TM4C_INSTALL_DIR}/usblib/host"/>
                                     <listOptionValue value="${SW_ROOT}/examples/boards/ek-tm4c1294xl"/>
@@ -101,7 +102,7 @@
                         </toolChain>
                     </folderInfo>
                     <sourceEntries>
-                        <entry excluding="forms/options_selection_form_old.c|test/control_sim.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="test/control_sim.c|third_party/hybrid_graphics_engine/legacy" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                     </sourceEntries>
                 </configuration>
             </storageModule>
@@ -152,6 +153,7 @@
                                     <listOptionValue value="ccs=&quot;ccs&quot;"/>
                                     <listOptionValue value="PART_TM4C1294NCPDT"/>
                                     <listOptionValue value="TARGET_IS_TM4C129_RA2"/>
+                                    <listOptionValue value="EK_TM4C129_BP1"/>
                                 </option>
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_18.12.compilerID.DIAG_WARNING.548169184" superClass="com.ti.ccstudio.buildDefinitions.TMS470_18.12.compilerID.DIAG_WARNING" valueType="stringList">
                                     <listOptionValue value="225"/>
@@ -161,6 +163,7 @@
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_18.12.compilerID.INCLUDE_PATH.540790173" superClass="com.ti.ccstudio.buildDefinitions.TMS470_18.12.compilerID.INCLUDE_PATH" valueType="includePath">
                                     <listOptionValue value="${COM_TI_TM4C_INCLUDE_PATH}"/>
                                     <listOptionValue value="${PROJECT_ROOT}"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/third_party/hybrid_graphics_engine/engine/tm4c1294_ft812"/>
                                     <listOptionValue value="${SW_ROOT}/examples/boards/ek-tm4c1294xl"/>
                                     <listOptionValue value="${SW_ROOT}"/>
                                     <listOptionValue value="${CG_TOOL_ROOT}/include"/>
@@ -188,6 +191,7 @@
                                 </option>
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_18.12.linkerID.LIBRARY.1673251461" superClass="com.ti.ccstudio.buildDefinitions.TMS470_18.12.linkerID.LIBRARY" valueType="libs">
                                     <listOptionValue value="${COM_TI_TM4C_LIBRARIES}"/>
+                                    <listOptionValue value="${COM_TI_TM4C_INSTALL_DIR}/usblib/ccs/Debug/usblib.lib"/>
                                     <listOptionValue value="${SW_ROOT}/driverlib/ccs/Debug/driverlib.lib"/>
                                     <listOptionValue value="libc.a"/>
                                 </option>
@@ -198,6 +202,9 @@
                             <tool id="com.ti.ccstudio.buildDefinitions.TMS470_18.12.hex.1720511658" name="ARM Hex Utility" superClass="com.ti.ccstudio.buildDefinitions.TMS470_18.12.hex"/>
                         </toolChain>
                     </folderInfo>
+                    <sourceEntries>
+                        <entry excluding="test/control_sim.c|third_party/hybrid_graphics_engine/legacy" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                    </sourceEntries>
                 </configuration>
             </storageModule>
             <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

@@ -1,0 +1,4 @@
+[submodule "third_party/hybrid_graphics_engine"]
+	path = third_party/hybrid_graphics_engine
+	url = https://github.com/adrianTelecontrol/TeleGUI.git
+	branch = master

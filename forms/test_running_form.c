@@ -223,10 +223,10 @@ static void onShowThisForm(EventParam_t arg) {
 		dualGraphData.heads[0] = 0;
 		dualGraphData.totalPointsAdded[1] = 0;
 		dualGraphData.heads[1] = 0;
-		dualGraphData.bgProfileData = NULL;
+		dualGraphData.bgProfileData[0] = NULL;
 		dualGraphData.bIsDirty = true;
 		variableSPData.bIsDirty = true;
-		dualGraphData.bShowBgProfile = false;
+		dualGraphData.bShowBgProfile[0] = false;
 		durationValueData.bIsDirty = true;
 	} else if(arg.ui32 == UL_TEST_FAULT) {
 		ul_fault_current_test_s fault = ExperimentCfg_getCurrFaultCfg();
@@ -240,9 +240,8 @@ static void onShowThisForm(EventParam_t arg) {
 		dualGraphData.heads[0] = 0;
 		dualGraphData.totalPointsAdded[1] = 0;
 		dualGraphData.heads[1] = 0;
-		dualGraphData.bgProfileData = NULL;
-		dualGraphData.bShowBgProfile = true;
-		dualGraphData.bShowBgProfile = false;
+		dualGraphData.bgProfileData[0] = NULL;
+		dualGraphData.bShowBgProfile[0] = false;
 		dualGraphData.bIsDirty = true;
 		variableSPData.bIsDirty = true;
 	} else if(arg.ui32 == UL_TEST_SEQUENCE) {
@@ -253,7 +252,7 @@ static void onShowThisForm(EventParam_t arg) {
 		snprintf(dualGraphData.xAxisName, 16, "t [s]");
 		snprintf(dualGraphData.yAxisNameRight, 16, "T [C]");
 		ExperimentCfg_generateSequencePoints(traceProfileData, GRAPH_MAX_POINTS);
-		dualGraphData.bgProfileData = traceProfileData;
+		dualGraphData.bgProfileData[0] = traceProfileData;
 		dualGraphData.maxY[0] = profile->maxCurrentRequested;
 		dualGraphData.maxXValue = profile->totalDurationSec;
 		dualGraphData.totalPointsAdded[0] = 0;
@@ -262,7 +261,7 @@ static void onShowThisForm(EventParam_t arg) {
 		dualGraphData.heads[1] = 0;
 		dualGraphData.bIsDirty = true;
 		variableSPData.bIsDirty = true;
-		dualGraphData.bShowBgProfile = true;
+		dualGraphData.bShowBgProfile[0] = true;
 		durationValueData.bIsDirty = true;
 	} else {
 		strcpy(variableParamBuf, "Param ERROR!");
@@ -359,12 +358,12 @@ void initTestRunningForm(void) {
         // ========================================================
         // TRAZA ESTÁTICA DE FONDO: PERFIL ESPERADO
         // ========================================================
-        .bgProfileData = traceProfileData, 
-        .bgProfileColor = g_pCurrentTheme->palette.secondary, // Un color neutro para el fondo
-        .bShowBgProfile = true,
-        .bBgIsDashed = true,
-        .bgDashLen = 6,
-        .bgSpaceLen = 6,
+        .bgProfileData = {traceProfileData, NULL},
+        .bgProfileColor = {g_pCurrentTheme->palette.secondary, 0},
+        .bShowBgProfile = {true, false},
+        .bBgIsDashed = {true, false},
+        .bgDashLen = {6, 0},
+        .bgSpaceLen = {6, 0},
 
         // ========================================================
         // EJE 0 (IZQUIERDA) : CORRIENTE REAL (Dinámica)

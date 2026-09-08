@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "build_config.h"
 #include "gpu_ft81x.h"
 #include "FT8xx_params.h"
 #include "event_engine.h"
@@ -38,6 +39,7 @@
 #include "forms/diagnostics/readings_dashboard_form.h"
 #include "forms/adjusts/rtc_adjust_form.h"
 #include "forms/eeprom_sync_result_form.h"
+#include "forms/voltage_preset_form.h"
 
 #include "forms_manager.h"
 
@@ -234,6 +236,13 @@ static void onShowAdjRTCFormEvent(EventParam_t arg) {
 
 static void onShowEEPROMSyncResultEvent(EventParam_t arg) {
   	g_psCurrentForm = g_psForms[g_i16EepromSyncIndex];
+  	g_bIsBackgroundReady = false;
+
+  	Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
+}
+
+static void onShowVoltagePresetFormEvent(EventParam_t arg) {
+  	g_psCurrentForm = g_psForms[g_i16VoltagePresetIndex];
   	g_bIsBackgroundReady = false;
 
   	Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
@@ -613,6 +622,7 @@ void FormManager_Init(void) {
   initVariacDebugForm();
   initRtcAdjustForm();
   initEepromSyncForm();
+  initVoltagePresetForm();
 
   // Form changing events
   Event_Subscribe(EVT_SYS_SHOW_HOME_FORM, (EventHandler_fn)onShowHomeFormEvent);
@@ -622,6 +632,7 @@ void FormManager_Init(void) {
   Event_Subscribe(EVT_SYS_SHOW_FAULT_CONFIG_FORM, (EventHandler_fn)onShowFaultConfigFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_CURRENT, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_DURATION, (EventHandler_fn)onNumpadModValueFormEvent);
+  Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_PRESET_VOLTAGE, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_FAULT_CFG_CALIBER, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_DURATION, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_TEMP, (EventHandler_fn)onNumpadModValueFormEvent);
@@ -649,6 +660,9 @@ void FormManager_Init(void) {
   Event_Subscribe(EVT_SYS_SHOW_READINGS_DASHBOARD_FORM, (EventHandler_fn)onReadingDashboardFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_ADJ_RTC_FORM, (EventHandler_fn)onShowAdjRTCFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_EEPROM_SYNC_RESULT_FORM, (EventHandler_fn)onShowEEPROMSyncResultEvent);
+  #ifdef ENABLE_VOLTAGE_PRESET_FORM
+  Event_Subscribe(EVT_SYS_SHOW_VOLTAGE_PRESET_FORM, (EventHandler_fn)onShowVoltagePresetFormEvent);
+  #endif
 
   
   g_psCurrentForm = g_psForms[g_i16BootFormID];

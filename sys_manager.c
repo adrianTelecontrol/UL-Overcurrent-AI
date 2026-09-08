@@ -376,6 +376,7 @@ void SysManager_Task(void) {
             strncpy(g_testSummary.timeStart, timeStrLog, sizeof(g_testSummary.timeStart) - 1);
 
             float f32TargetValue = 0.0f;
+            float f32PresetVoltage = 0.0f;
             bool bIsHighRes = false;
             memset(szCurrentLogFileName, 0, sizeof(szCurrentLogFileName));
 
@@ -385,11 +386,13 @@ void SysManager_Task(void) {
                     ul_fault_current_test_s faultCfg = ExperimentCfg_getCurrFaultCfg();
                     ui32TestDurationMs = faultCfg.ui16Duration * 1000;
                     f32TargetValue = faultCfg.f32TargetCurrent;
+                    f32PresetVoltage = faultCfg.f32PresetVoltage;
                     bIsHighRes = faultCfg.bIsHighResistence;
                     
                     // Poblamos el resumen
                     g_testSummary.setDurationSec = faultCfg.ui16Duration;
                     g_testSummary.targetCurrent = faultCfg.f32TargetCurrent;
+                    g_testSummary.presetVoltage = faultCfg.f32PresetVoltage;
                     g_testSummary.isHighResistance = faultCfg.bIsHighResistence;
 
                     snprintf(szCurrentLogFileName, sizeof(szCurrentLogFileName), "1:/LOGS/FLT_%s_%s.CSV", dateStrLog, timeStrLog);
@@ -450,7 +453,7 @@ void SysManager_Task(void) {
 		
 		    // Usamos la variable estática para abrir el log
 		    if (LogManager_StartLog(szCurrentLogFileName)) {
-		        ExperimentCfg_SendStartCommand(g_ui32CurrentTestType, ui32TestDurationMs / 1000, f32TargetValue, bIsHighRes);
+		        ExperimentCfg_SendStartCommand(g_ui32CurrentTestType, ui32TestDurationMs / 1000, f32TargetValue, bIsHighRes, f32PresetVoltage);
 		        //Event_Post(EVT_SYS_TEST_STARTED, (EventParam_t){.ptr = NULL});
 		
 		        g_bInstConfirmedStart = false;
