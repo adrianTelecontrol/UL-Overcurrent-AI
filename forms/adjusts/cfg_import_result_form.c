@@ -149,7 +149,7 @@ void initCfgImportResultForm(void) {
     // --- TÍTULO ---
     formTitleData = (gfx_Label) {
         .name = "formTitle", .text = "IMPORT CFG",
-        .pos.x = 110, .pos.y = 50, .alignment = ALIGN_LEFT,
+        .pos.x = 125, .pos.y = 50, .alignment = ALIGN_LEFT,
         .typo = TYPO_H3, .style = STYLE_TEXT_MAIN, .isVisible = true,
     };
     formTitleWidget.eWidgetType = WD_TYPE_LABEL; formTitleWidget.pvWidget = &formTitleData;

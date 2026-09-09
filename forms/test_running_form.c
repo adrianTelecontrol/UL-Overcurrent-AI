@@ -196,7 +196,7 @@ static void onTempProbeSecondaryChanged(EventParam_t arg) {
 }
 
 static void onVoltageSecondaryChanged(EventParam_t arg) {
-	snprintf(voltageBuff, sizeof(voltageBuff), "Vo: %.2f [V]");
+	snprintf(voltageBuff, sizeof(voltageBuff), "Vo: %.2f [V]", arg.f32);
 	voltageValueData.bIsDirty = true;
 }
 
@@ -277,7 +277,7 @@ void initTestRunningForm(void) {
 	formTitleData = (gfx_Label) {
 		.name = "formTitleData",
 		.text = "PRUEBAS",
-        .pos.x = 110,
+        .pos.x = 125,
         .pos.y = 50,
         .alignment = ALIGN_LEFT,
         .typo = TYPO_H3,           

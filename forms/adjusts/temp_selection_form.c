@@ -103,7 +103,7 @@ void initTempSelectionForm(void) {
     formTitleData = (gfx_Label) {
         .name = "formTitleData",
         .text = "TEMPERATURA",
-        .pos.x = 110, .pos.y = 50,
+        .pos.x = 125, .pos.y = 50,
         .alignment = ALIGN_LEFT,
         .typo = TYPO_H3,           
         .style = STYLE_TEXT_MAIN,

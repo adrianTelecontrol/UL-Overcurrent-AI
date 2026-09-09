@@ -39,6 +39,7 @@
 #include "forms/diagnostics/readings_dashboard_form.h"
 #include "forms/adjusts/rtc_adjust_form.h"
 #include "forms/eeprom_sync_result_form.h"
+#include "forms/factory_reset_confirmation_form.h"
 #include "forms/voltage_preset_form.h"
 
 #include "forms_manager.h"
@@ -89,6 +90,13 @@ static void onNumpadModValueFormEvent(EventParam_t arg) {
 
 static void onShowTestConfirmationFormEvent(EventParam_t arg) {
   g_psCurrentForm = g_psForms[g_i16TestConfirmationIndex];
+  g_bIsBackgroundReady = false;
+
+  Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
+}
+
+static void onShowFactoryResetConfirmationFormEvent(EventParam_t arg) {
+  g_psCurrentForm = g_psForms[g_i16FactoryResetConfirmationIndex];
   g_bIsBackgroundReady = false;
 
   Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
@@ -622,6 +630,7 @@ void FormManager_Init(void) {
   initVariacDebugForm();
   initRtcAdjustForm();
   initEepromSyncForm();
+  initFactoryResetConfirmationForm();
   initVoltagePresetForm();
 
   // Form changing events
@@ -639,6 +648,7 @@ void FormManager_Init(void) {
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_CALIBER, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_PROFILE_CFG_CALIBER, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_TEST_CONFIRMATION, (EventHandler_fn)onShowTestConfirmationFormEvent);
+  Event_Subscribe(EVT_SYS_SHOW_FACTORY_RESET_CONFIRMATION, (EventHandler_fn)onShowFactoryResetConfirmationFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_TEST_RUNNING, (EventHandler_fn)onShowTestRunningFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_FINISHED_TEST, (EventHandler_fn)onShowFinishedTestEvent);
   Event_Subscribe(EVT_SYS_SHOW_CRUSH_CONFIG_FORM, (EventHandler_fn)onShowCrushTestConfigEvent);

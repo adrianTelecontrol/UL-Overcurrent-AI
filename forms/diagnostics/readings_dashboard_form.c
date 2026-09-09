@@ -262,7 +262,7 @@ void initReadingsDashboardForm(void) {
 
     titleData = (gfx_Label){
         .text = "LECTURAS", .name = "sysTitle",
-        .pos.x = 110, .pos.y = 50, .alignment = ALIGN_LEFT,
+        .pos.x = 125, .pos.y = 50, .alignment = ALIGN_LEFT,
         .typo = TYPO_H3, .style = STYLE_TEXT_MAIN, .isVisible = true,
     };
     titleWidget.eWidgetType = WD_TYPE_LABEL; titleWidget.pvWidget = &titleData;

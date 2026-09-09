@@ -66,7 +66,7 @@ void initTestFinishedForm(void) {
 	formTitleData = (gfx_Label) {
 		.name = "formTitleData",
 		.text = "PRUEBAS",
-        .pos.x = 110,
+        .pos.x = 125,
         .pos.y = 50,
         .alignment = ALIGN_LEFT,
         .typo = TYPO_H3,           

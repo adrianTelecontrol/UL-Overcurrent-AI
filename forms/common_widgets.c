@@ -168,6 +168,12 @@ static void onShowOptionsForm(void) {
 	
 }
 
+static void onThemeChanged(EventParam_t arg) {
+	(void)arg;
+	headerPanelData.color = g_pCurrentTheme->palette.surface;
+	headerPanelData.bIsDirty = true;
+}
+
 void initCommonWidgets(void) {
 
     dateData = (gfx_Label){
@@ -278,8 +284,9 @@ void initCommonWidgets(void) {
 	tcLogoImgData = (gfx_Image) {
 		.name = "mainLogo",
 		.pos.x = 5,
-		.pos.y = 15,
+		.pos.y = 5,
 		.scale = 1,
+		.hasTransparency = true,
 	};
 
 	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_tc.png", &tcLogoImgData, 0, NULL)) {
@@ -304,6 +311,7 @@ void initCommonWidgets(void) {
 	Event_Subscribe(EVT_SYS_SHOW_HOME_FORM, (EventHandler_fn)onShowHomeForm);
 	Event_Subscribe(EVT_SYS_SHOW_TEST_SELECTION_FORM, (EventHandler_fn)onShowSelectionForm);
 	Event_Subscribe(EVT_SYS_SHOW_OPTIONS_FORM, (EventHandler_fn)onShowOptionsForm);
+	Event_Subscribe(EVT_CMD_CHANGE_THEME, (EventHandler_fn)onThemeChanged);
 }
 
 void useNavigationButtons(gfx_Canvas* canvas) {

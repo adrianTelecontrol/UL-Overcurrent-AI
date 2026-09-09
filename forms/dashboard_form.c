@@ -115,6 +115,37 @@ gfx_Label indicator4IconData;
 gfx_Label indicator5IconData;
 gfx_Label indicator6IconData;
 
+static void Dashboard_ApplyThemeColors(void) {
+	uint8_t i;
+	gfx_Rectangle *surfacePanels[] = {
+		&sensorPanelBgData,
+		&statusPanelBgData,
+	};
+	gfx_Rectangle *backgroundPanels[] = {
+		&currentPanelData,
+		&t1PanelData,
+		&voPanelData,
+		&sysStatusPanelData,
+		&instStatusPanelData,
+		&usbPanelData,
+	};
+
+	for (i = 0; i < sizeof(surfacePanels) / sizeof(surfacePanels[0]); i++) {
+		surfacePanels[i]->color = g_pCurrentTheme->palette.surface;
+		surfacePanels[i]->bIsDirty = true;
+	}
+
+	for (i = 0; i < sizeof(backgroundPanels) / sizeof(backgroundPanels[0]); i++) {
+		backgroundPanels[i]->color = g_pCurrentTheme->palette.background;
+		backgroundPanels[i]->bIsDirty = true;
+	}
+}
+
+static void onThemeChanged(EventParam_t arg) {
+	(void)arg;
+	Dashboard_ApplyThemeColors();
+}
+
 // ==========================================
 // 3. Static Text Buffers
 // ==========================================
@@ -130,6 +161,81 @@ static char voltageBuffer[16] = "--.- [V]";
 static char sysStatusBuffer[20] = "Listo";
 static char instStatusBuffer[20] = "UNSYNC";
 static char usbBuffer[20] = "DESCONECTADO";
+
+typedef struct {
+	const char *label;
+	const char *value;
+	const char *icon;
+	gfx_WidgetStyle_e style;
+	gfx_TypoStyle_e typo;
+} DashboardItem_t;
+
+static DashboardItem_t g_aDashboardItems[9];
+
+static void Dashboard_UpdateItems(void) {
+	gfx_WidgetStyle_e systemStyle =
+		(strcmp(sysStatusBuffer, "ABORTADO") == 0) ? STYLE_DANGER : STYLE_SUCCESS;
+
+	g_aDashboardItems[0] = (DashboardItem_t){indicatorsName[0], t1Buffer, ICON_TEMPERATURE, STYLE_PRIMARY, TYPO_H1};
+	g_aDashboardItems[1] = (DashboardItem_t){indicatorsName[1], t2Buffer, ICON_TEMPERATURE, STYLE_SUCCESS, TYPO_H1};
+	g_aDashboardItems[2] = (DashboardItem_t){indicatorsName[2], t3Buffer, ICON_TEMPERATURE, STYLE_SECONDARY, TYPO_H1};
+	g_aDashboardItems[3] = (DashboardItem_t){indicatorsName[3], sysStatusBuffer,
+		(systemStyle == STYLE_DANGER) ? ICON_WARNING : ICON_CHECK, systemStyle, TYPO_H1};
+	g_aDashboardItems[4] = (DashboardItem_t){indicatorsName[4], instStatusBuffer,
+		g_bIsInstSyncd ? ICON_SYNC : ICON_UNSYNC,
+		g_bIsInstSyncd ? STYLE_SUCCESS : STYLE_DANGER, TYPO_H1};
+	g_aDashboardItems[5] = (DashboardItem_t){indicatorsName[5], usbBuffer,
+		g_bIsUSBConnected ? ICON_USB_CONN : ICON_USB_DISCONN,
+		g_bIsUSBConnected ? STYLE_SUCCESS : STYLE_DANGER, TYPO_H3};
+	g_aDashboardItems[6] = (DashboardItem_t){indicatorsName[6], currentBuffer, ICON_LIGHTNING, STYLE_SUCCESS, TYPO_H1};
+	g_aDashboardItems[7] = (DashboardItem_t){indicatorsName[7], t4Buffer, ICON_TEMPERATURE, STYLE_PRIMARY, TYPO_H1};
+	g_aDashboardItems[8] = (DashboardItem_t){indicatorsName[8], voltageBuffer, ICON_WAVE, STYLE_SECONDARY, TYPO_H1};
+}
+
+static void Dashboard_ApplyPage(void) {
+	static const uint8_t primaryItems[6] = {0, 1, 2, 3, 4, 5};
+	static const uint8_t secondaryItems[6] = {3, 4, 5, 6, 7, 8};
+	gfx_Label *labels[6] = {&indicator1LbData, &indicator2LbData, &indicator3LbData,
+		&indicator4LbData, &indicator5LbData, &indicator6LbData};
+	gfx_Label *values[6] = {&indicator1ValueData, &indicator2ValueData, &indicator3ValueData,
+		&indicator4ValueData, &indicator5ValueData, &indicator6ValueData};
+	gfx_Label *iconsData[6] = {&indicator1IconData, &indicator2IconData, &indicator3IconData,
+		&indicator4IconData, &indicator5IconData, &indicator6IconData};
+	gfx_Rectangle *panels[6] = {&currentPanelData, &t1PanelData, &voPanelData,
+		&sysStatusPanelData, &instStatusPanelData, &usbPanelData};
+	const uint8_t *pageItems = g_bIsSecondaryViewVisible ? secondaryItems : primaryItems;
+	uint16_t sensorX = g_bIsSecondaryViewVisible ? rightArrowButtonData.size.width + 15U : 10U;
+	uint16_t statusX = sensorX + sensorPanelBgData.dim.width + (g_bIsSecondaryViewVisible ? 15U : 10U);
+	uint8_t slot;
+
+	Dashboard_UpdateItems();
+	sensorPanelBgData.pos.x = sensorX;
+	statusPanelBgData.pos.x = statusX;
+	for (slot = 0U; slot < 6U; slot++) {
+		DashboardItem_t *item = &g_aDashboardItems[pageItems[slot]];
+		uint16_t panelX = (slot < 3U) ? sensorX + 10U : statusX + 10U;
+
+		panels[slot]->pos.x = panelX;
+		labels[slot]->pos.x = panelX + 20U;
+		values[slot]->pos.x = panelX + 70U;
+		iconsData[slot]->pos.x = panelX + 10U;
+		labels[slot]->text = item->label;
+		values[slot]->text = item->value;
+		values[slot]->typo = item->typo;
+		values[slot]->style = item->style;
+		values[slot]->pos.y = labels[slot]->pos.y +
+			(item->typo == TYPO_H3 ? 20U : 10U);
+		iconsData[slot]->text = item->icon;
+		iconsData[slot]->style = item->style;
+		iconsData[slot]->pos.y = values[slot]->pos.y + 10U;
+		panels[slot]->bIsDirty = true;
+		labels[slot]->bIsDirty = true;
+		values[slot]->bIsDirty = true;
+		iconsData[slot]->bIsDirty = true;
+	}
+	leftArrowButtonData.bIsVisible = !g_bIsSecondaryViewVisible;
+	rightArrowButtonData.bIsVisible = g_bIsSecondaryViewVisible;
+}
 
 // ==========================================
 // Callbacks 
@@ -413,6 +519,7 @@ static void onLeftArrowReleaseEvent(gfx_Button *btn) {
 	rightArrowButtonData.bIsVisible = true;
 	leftArrowButtonData.bIsVisible = false;
 
+	Dashboard_ApplyPage();
 	Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
 }
 
@@ -494,13 +601,15 @@ static void onRightArrowReleaseEvent(gfx_Button *btn) {
 	rightArrowButtonData.bIsVisible = false;
 	leftArrowButtonData.bIsVisible = true;
 
+	Dashboard_ApplyPage();
 	Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
 }
 
 static void onInstStateEvent(EventParam_t arg) {
 	if(arg.str == NULL) return;
 	
-	strncpy(sysStatusBuffer, arg.str, sizeof(sysStatusBuffer));
+	strncpy(sysStatusBuffer, arg.str, sizeof(sysStatusBuffer) - 1U);
+	sysStatusBuffer[sizeof(sysStatusBuffer) - 1U] = '\0';
 	
 	if(g_bIsSecondaryViewVisible) {
 		if(strcmp(arg.str, "ABORTADO") == 0) {
@@ -542,7 +651,7 @@ void initDashboardForm(void)
     titleData = (gfx_Label){
         .text = "System Status",
         .name = "sysTitle",
-        .pos.x = 110,
+        .pos.x = 125,
         .pos.y = 50,
         .alignment = ALIGN_LEFT,
         .typo = TYPO_H3,           
@@ -801,7 +910,7 @@ void initDashboardForm(void)
 		.pos.y = indicator5ValueData.pos.y + 10,
 		.alignment = (gfx_Align_e)(ALIGN_LEFT | ALIGN_TOP),
 		.typo = TYPO_ICON,
-		.style = STYLE_PRIMARY,
+		.style = g_bIsInstSyncd ? STYLE_SUCCESS : STYLE_DANGER,
 		.isVisible = true,
 	};
 	instStatusIconWidget.eWidgetType = WD_TYPE_LABEL;
@@ -908,6 +1017,7 @@ void initDashboardForm(void)
 	// Subscribe to events
 	Event_Subscribe(EVT_CAN_INST_CURRENT_SECUNDARY, ( EventHandler_fn )onCurrentSecondaryValueChanged);
 	Event_Subscribe(EVT_CAN_INST_VOLTAGE_SECONDARY, ( EventHandler_fn )onVoltageSecondaryValueChanged);
+	Event_Subscribe(EVT_CMD_CHANGE_THEME, (EventHandler_fn)onThemeChanged);
 	Event_Subscribe(EVT_CAN_INST_TEMP_PROBE_MAIN, ( EventHandler_fn )onTempProbeMainValueChanged);
 	Event_Subscribe(EVT_CAN_INST_TEMP_TX_PRIMARY, ( EventHandler_fn )onTempTxPrimaryValueChanged);
 	Event_Subscribe(EVT_CAN_INST_TEMP_TX_SECONDARY, ( EventHandler_fn )onTempTxSecondaryValueChanged);

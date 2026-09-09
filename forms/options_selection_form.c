@@ -30,6 +30,7 @@ static gfx_GenericWidget calendarOptWidget;
 static gfx_GenericWidget saveEepromWidget;
 static gfx_GenericWidget factoryResetWidget;
 static gfx_GenericWidget debugWidget;
+static gfx_GenericWidget themeWidget;
 
 // Widgets Data
 static gfx_Label formTitleData;
@@ -39,6 +40,7 @@ static gfx_Button calendarOptData;
 static gfx_Button saveEepromData;
 static gfx_Button factoryResetData;
 static gfx_Button debugData;
+static gfx_Button themeData;
 
 static EventID_e g_eFormCallback = EVT_SYS_NULL;
 
@@ -72,15 +74,17 @@ static void onSaveEepromBtnReleasedEvent(gfx_Button *btn) {
 
 static void onFactoryResetBtnReleasedEvent(gfx_Button *btn) {
     onGenericBtnRelease(btn);
-    // Dispara el reseteo a valores de fábrica en tu lógica principal
-	HAL_CAN_Msg_t msg = { .id = CAN_ID_REQ_FACTORY_RESET, .isExtended = false, .length = 0};
-    HAL_CAN_Transmit(&msg);
-    Event_Post(EVT_SYS_SHOW_EEPROM_SYNC_RESULT_FORM, (EventParam_t){.bool_ = true});
+    Event_Post(EVT_SYS_SHOW_FACTORY_RESET_CONFIRMATION, (EventParam_t){.ptr = NULL});
 }
 
 static void onDebugBtnReleasedEvent(gfx_Button *btn) {
     onGenericBtnRelease(btn);
     Event_Post(EVT_SYS_SHOW_DEBUG_MENU, (EventParam_t){.ptr = NULL});
+}
+
+static void onThemeBtnReleasedEvent(gfx_Button *btn) {
+    onGenericBtnRelease(btn);
+    Event_Post(EVT_CMD_CHANGE_THEME, (EventParam_t){.ptr = NULL});
 }
 
 void initOptionsSelectionForm(void) {
@@ -89,7 +93,7 @@ void initOptionsSelectionForm(void) {
     formTitleData = (gfx_Label) {
         .name = "formTitleData",
         .text = "AJUSTES",
-        .pos.x = 110,
+        .pos.x = 125,
         .pos.y = 50,
         .alignment = ALIGN_LEFT,
         .typo = TYPO_H3,           
@@ -119,8 +123,6 @@ void initOptionsSelectionForm(void) {
 
     float col1_x = (LCD_WIDTH / 2 - btnWidth) / 2.0;
     float col2_x = LCD_WIDTH / 2.0f + (LCD_WIDTH / 2 - btnWidth) / 2.0;
-    float col_center_x = (LCD_WIDTH / 2.0f) - (btnWidth / 2.0f); // Para centrar el botón impar
-    
     float row1_y = formSubtitleData.pos.y + 25;
     float row2_y = row1_y + btnHeight + verticalPadding;
     float row3_y = row2_y + btnHeight + verticalPadding;
@@ -183,15 +185,24 @@ void initOptionsSelectionForm(void) {
     gfx_initRegTouch((void *)&factoryResetData, WD_TYPE_BUTTON);
     factoryResetWidget.eWidgetType = WD_TYPE_BUTTON; factoryResetWidget.pvWidget = &factoryResetData;
 
-    // --- Fila 4: EEPROM y Factory Reset (Lado a Lado) ---
+    // --- Fila 4: Debug y Tema ---
     debugData = (gfx_Button) {
         .label = "DEBUG",
-        .pos.x = col_center_x, .pos.y = row4_y, .size.width = btnWidth, .size.height = btnHeight,
+        .pos.x = col1_x, .pos.y = row4_y, .size.width = btnWidth, .size.height = btnHeight,
         .borderWidth = 3, .radius = 2, .state = BTN_STATE_NORMAL, .style = STYLE_DEFAULT, .typo = TYPO_BODY, .bIsVisible = true, 
         .onPressed = onGenericBtnPressed, .onRelease = onDebugBtnReleasedEvent,
     };
     gfx_initRegTouch((void *)&debugData, WD_TYPE_BUTTON);
     debugWidget.eWidgetType = WD_TYPE_BUTTON; debugWidget.pvWidget = &debugData;
+
+    themeData = (gfx_Button) {
+        .label = "TEMA",
+        .pos.x = col2_x, .pos.y = row4_y, .size.width = btnWidth, .size.height = btnHeight,
+        .borderWidth = 3, .radius = 2, .state = BTN_STATE_NORMAL, .style = STYLE_DEFAULT, .typo = TYPO_BODY, .bIsVisible = true,
+        .onPressed = onGenericBtnPressed, .onRelease = onThemeBtnReleasedEvent,
+    };
+    gfx_initRegTouch((void *)&themeData, WD_TYPE_BUTTON);
+    themeWidget.eWidgetType = WD_TYPE_BUTTON; themeWidget.pvWidget = &themeData;
 
 
     // ==========================================
@@ -217,6 +228,7 @@ void initOptionsSelectionForm(void) {
 
     // Fila 4
     canvasInsertAtTop(&g_sOptionsSelectionCanvas.psWidgets, &debugWidget);
+    canvasInsertAtTop(&g_sOptionsSelectionCanvas.psWidgets, &themeWidget);
     
     g_i16OptionsSelectionIndex = FormManager_AddForm(&g_sOptionsSelectionCanvas);
 }

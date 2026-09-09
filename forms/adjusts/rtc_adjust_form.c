@@ -200,7 +200,7 @@ void initRtcAdjustForm(void) {
     g_sRtcAdjustCanvas.ui16BackgroundColor = g_pCurrentTheme->palette.background;
 
     // Títulos
-    titleData = (gfx_Label) { .text = "ADJUST RTC", .pos.x = 110, .pos.y = 50, .alignment = ALIGN_LEFT, .typo = TYPO_H3, .style = STYLE_TEXT_MAIN, .isVisible = true };
+    titleData = (gfx_Label) { .text = "ADJUST RTC", .pos.x = 125, .pos.y = 50, .alignment = ALIGN_LEFT, .typo = TYPO_H3, .style = STYLE_TEXT_MAIN, .isVisible = true };
     titleWidget.eWidgetType = WD_TYPE_LABEL; titleWidget.pvWidget = &titleData;
 
     subtitleData = (gfx_Label){ .text = "SELECCIONE EL CAMPO Y USE + O - PARA AJUSTAR", .pos.x = LCD_WIDTH / 2, .pos.y = 100, .alignment = ALIGN_CENTER, .style = STYLE_TEXT_MUTED, .typo = TYPO_CAPTION, .isVisible = true };
