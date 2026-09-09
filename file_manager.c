@@ -9,6 +9,7 @@
 #include "file_manager.h"
 
 #define PATH_BUF_SIZE 100
+#define BDF_MONO_POOL_CAPACITY 65536U
 static const char TASK_NAME[] = "FILE_MANAGER";
 
 static FM_EVEImageAsset_t g_sEVEImageAssets[FM_EVE_IMAGE_MAX_ASSETS];
@@ -371,10 +372,11 @@ bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont
     psFont->firstChar = startChar;
     psFont->lastChar = endChar;
     psFont->poolSize = 0;
+    psFont->bitmapFormat = FONT_BITMAP_MONO_1BPP;
     
     uint32_t numChars = endChar - startChar + 1;
     psFont->glyphs = (BDF_Glyph_t *)calloc(numChars, sizeof(BDF_Glyph_t)); // calloc limpia con ceros automáticamente
-    psFont->pixelPool = (uint8_t *)malloc(65536); 
+    psFont->pixelPool = (uint8_t *)malloc(BDF_MONO_POOL_CAPACITY);
 
     if (!psFont->glyphs || !psFont->pixelPool) {
         free(fileBuffer);
@@ -386,6 +388,8 @@ bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont
     // 3. PARSEO EN RAM (A la velocidad nativa del CPU)
     int32_t currentChar = -1;
     bool inBitmap = false;
+    bool parseValid = true;
+    uint16_t bitmapRows = 0U;
     BDF_Glyph_t tempGlyph = {0};
 
     char *line = fileBuffer;
@@ -416,19 +420,32 @@ bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont
 
         if (inBitmap) {
             if (firstChar == 'E' && strncmp(line, "ENDCHAR", 7) == 0) {
+                if (currentChar >= startChar && currentChar <= endChar &&
+                    bitmapRows != tempGlyph.height) {
+                    parseValid = false;
+                    break;
+                }
                 inBitmap = false;
                 currentChar = -1;
             } 
             else if (currentChar >= startChar && currentChar <= endChar) {
                 int bytesPerRow = (tempGlyph.width + 7) / 8;
 				int i = 0;
+                if (bitmapRows >= tempGlyph.height ||
+                    strlen(line) < (size_t)(bytesPerRow * 2) ||
+                    psFont->poolSize + bytesPerRow > BDF_MONO_POOL_CAPACITY) {
+                    parseValid = false;
+                    break;
+                }
                 for (; i < bytesPerRow; i++) {
                     psFont->pixelPool[psFont->poolSize++] = BDF_HexToByte(&line[i * 2]);
                 }
+                bitmapRows++;
             }
         } 
         else if (firstChar == 'B' && strncmp(line, "BITMAP", 6) == 0) {
             inBitmap = true;
+            bitmapRows = 0U;
             if (currentChar >= startChar && currentChar <= endChar) {
                 uint32_t index = currentChar - startChar;
                 psFont->glyphs[index] = tempGlyph;
@@ -463,6 +480,17 @@ bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont
 
     // 4. LIBERAR EL BUFFER GIGANTE
     free(fileBuffer);
+
+    if (!parseValid || psFont->poolSize == 0U || psFont->yAdvance == 0U) {
+        free(psFont->glyphs);
+        free(psFont->pixelPool);
+        psFont->glyphs = NULL;
+        psFont->pixelPool = NULL;
+        psFont->poolSize = 0U;
+        TIVA_LOGE(TASK_NAME, "Invalid or oversized BDF: %s", pcFilePath);
+        return false;
+    }
+
     return true;
 }
 
