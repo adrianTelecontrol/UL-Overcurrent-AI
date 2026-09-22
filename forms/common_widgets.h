@@ -9,6 +9,8 @@ void useHeaderPanelWidget(gfx_Canvas* canvas);
 
 void useLogoWidget(gfx_Canvas* canvas);
 
+void useBlkLogoWidget(gfx_Canvas* canvas);
+
 void useFullHeader(gfx_Canvas* canvas);
 
 void useHeaderNoClock(gfx_Canvas* canvas);

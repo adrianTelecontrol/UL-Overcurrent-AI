@@ -28,7 +28,7 @@ static gfx_GenericWidget btnInicioWidget;
 static gfx_GenericWidget btnTestWidget;
 static gfx_GenericWidget btnOptionsWidget;
 static gfx_GenericWidget headerPanelWidget;
-static gfx_GenericWidget tcLogoImgWidget;
+static gfx_GenericWidget tcLogoImgWidget, tcBlkLogoImgWidget;
 static gfx_GenericWidget dateWidget;
 static gfx_GenericWidget timeWidget;
 static gfx_GenericWidget emergencyStopWidget;
@@ -42,7 +42,7 @@ static gfx_Button btnOptionsData;
 static gfx_Label homeIconData;
 
 static gfx_Label titleData;
-static gfx_Image tcLogoImgData;
+static gfx_Image tcLogoImgData, tcBlkLogoImgData;
 static gfx_Rectangle headerPanelData;
 static gfx_Label dateData;
 static gfx_Label timeData;
@@ -267,7 +267,20 @@ void initCommonWidgets(void) {
     btnOptionsWidget.eWidgetType = WD_TYPE_BUTTON; btnOptionsWidget.pvWidget = (void *)&btnOptionsData;
     gfx_initRegTouch(btnOptionsWidget.pvWidget, WD_TYPE_BUTTON);
 
+	tcBlkLogoImgData = (gfx_Image) {
+		.name = "mainLogo",
+		.pos.x = 5,
+		.pos.y = 15,
+		.scale = 1,
+	};
+
 	FM_EVEImageRegistryReset(EVE_FREE_RAMG_START);
+	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_blk_corrected.png", &tcBlkLogoImgData, 0, NULL)) {
+		TIVA_LOGE(TAG, "Fallo al cargar logo_blk_corrected.png en EVE");
+	}
+	tcBlkLogoImgWidget.eWidgetType = WD_TYPE_IMAGE;
+	tcBlkLogoImgWidget.pvWidget = (void *)&tcBlkLogoImgData;
+
 	tcLogoImgData = (gfx_Image) {
 		.name = "mainLogo",
 		.pos.x = 5,
@@ -320,6 +333,13 @@ void useLogoWidget(gfx_Canvas* canvas) {
 	if(canvas == NULL) return;
 
     canvasInsertAtTop(&canvas->psWidgets, &tcLogoImgWidget);
+
+}
+
+void useBlkLogoWidget(gfx_Canvas* canvas) {
+	if(canvas == NULL) return;
+
+    canvasInsertAtTop(&canvas->psWidgets, &tcBlkLogoImgWidget);
 
 }
 

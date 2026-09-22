@@ -468,12 +468,13 @@ void initBootForm(void)
     // 4. Insertion into Canvas
     // ==========================================
     // Background / Structure
+	//useLogoWidget(&g_sBootCanvas);
     canvasInsertAtTop(&g_sBootCanvas.psWidgets, &progressBarWidget);
     
     // Texts and Labels
     canvasInsertAtTop(&g_sBootCanvas.psWidgets, &mainTitleWidget);
     canvasInsertAtTop(&g_sBootCanvas.psWidgets, &subTitleWidget);
-	useLogoWidget(&g_sBootCanvas);
+	useBlkLogoWidget(&g_sBootCanvas);
 	canvasInsertAtTop(&g_sBootCanvas.psWidgets, &countdownWidget);
     
     // Terminal Texts
