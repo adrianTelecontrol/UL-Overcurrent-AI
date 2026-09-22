@@ -123,6 +123,13 @@ static void onShowCrushTestConfigEvent(EventParam_t arg) {
   Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
 }
 
+static void onShowCrushPidConfigEvent(EventParam_t arg) {
+  g_psCurrentForm = g_psForms[g_i16CrushPidConfigIndex];
+  g_bIsBackgroundReady = false;
+
+  Event_Post(EVT_CMD_FULL_REPAINT, (EventParam_t){.ptr = NULL});
+}
+
 static void onShowFileBrowserFormEvent(EventParam_t arg) {
   g_psCurrentForm = g_psForms[g_i16FileBrowserIndex];
   g_bIsBackgroundReady = false;
@@ -646,12 +653,19 @@ void FormManager_Init(void) {
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_DURATION, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_TEMP, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_CALIBER, (EventHandler_fn)onNumpadModValueFormEvent);
+  Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_PID_KP,
+                  (EventHandler_fn)onNumpadModValueFormEvent);
+  Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_PID_KI,
+                  (EventHandler_fn)onNumpadModValueFormEvent);
+  Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_PID_KD,
+                  (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_NUMPAD_MOD_PROFILE_CFG_CALIBER, (EventHandler_fn)onNumpadModValueFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_TEST_CONFIRMATION, (EventHandler_fn)onShowTestConfirmationFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_FACTORY_RESET_CONFIRMATION, (EventHandler_fn)onShowFactoryResetConfirmationFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_TEST_RUNNING, (EventHandler_fn)onShowTestRunningFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_FINISHED_TEST, (EventHandler_fn)onShowFinishedTestEvent);
   Event_Subscribe(EVT_SYS_SHOW_CRUSH_CONFIG_FORM, (EventHandler_fn)onShowCrushTestConfigEvent);
+  Event_Subscribe(EVT_SYS_SHOW_CRUSH_PID_CONFIG_FORM, (EventHandler_fn)onShowCrushPidConfigEvent);
   Event_Subscribe(EVT_SYS_SHOW_FILE_BROWSER, (EventHandler_fn)onShowFileBrowserFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_SEQUENCE_PREVIEW_FORM, (EventHandler_fn)onShowSequencePreviewFormEvent);
   Event_Subscribe(EVT_SYS_SHOW_OPTIONS_FORM, ( EventHandler_fn )onShowOptionsFormEvent);

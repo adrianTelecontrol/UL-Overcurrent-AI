@@ -8,6 +8,7 @@
 #include "event_engine.h"
 #include "gui_theme.h"
 #include "FT8xx_params.h"
+#include "inst_can_buffer.h"
 
 #include "common_widgets.h"
 
@@ -245,6 +246,34 @@ static void onCrushCfgCaliber(EventParam_t arg) {
 	g_eValueSubmitEvent = EVT_SYS_CRUSH_CFG_SUBMIT_CALIBER;
 }
 
+static void configureCrushPidNumpad(const char *label, float value,
+                                    EventID_e submitEvent) {
+    strcpy(valueLabelBuffer, label);
+    snprintf(digitBuffer, sizeof(digitBuffer), "%.3f", value);
+    digitLen = strlen(digitBuffer);
+    displayLabelData.bIsDirty = true;
+    displayValueData.bIsDirty = true;
+    g_eFormCallback = EVT_SYS_SHOW_CRUSH_PID_CONFIG_FORM;
+    g_eValueSubmitEvent = submitEvent;
+}
+
+static void onCrushPidKp(EventParam_t arg) {
+    configureCrushPidNumpad("PID TEMPERATURA: Kp", arg.f32,
+                            EVT_SYS_CRUSH_PID_SUBMIT_KP);
+}
+
+#if INST_TEMP_PID_ENABLE_INTEGRAL
+static void onCrushPidKi(EventParam_t arg) {
+    configureCrushPidNumpad("PID TEMPERATURA: Ki", arg.f32,
+                            EVT_SYS_CRUSH_PID_SUBMIT_KI);
+}
+#endif
+
+static void onCrushPidKd(EventParam_t arg) {
+    configureCrushPidNumpad("PID TEMPERATURA: Kd", arg.f32,
+                            EVT_SYS_CRUSH_PID_SUBMIT_KD);
+}
+
 static void onProfileCfgCaliber(EventParam_t arg) {
     strcpy(valueLabelBuffer, "CALIBRE [AWG]");
 
@@ -413,6 +442,14 @@ void initNumpadModifyValueForm(void) {
     Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_DURATION, (EventHandler_fn)onCrushCfgDuration);
     Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_TEMP, (EventHandler_fn)onCrushCfgTemp);
     Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_CFG_CALIBER, (EventHandler_fn)onCrushCfgCaliber);
+    Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_PID_KP,
+                    (EventHandler_fn)onCrushPidKp);
+#if INST_TEMP_PID_ENABLE_INTEGRAL
+    Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_PID_KI,
+                    (EventHandler_fn)onCrushPidKi);
+#endif
+    Event_Subscribe(EVT_SYS_NUMPAD_MOD_CRUSH_PID_KD,
+                    (EventHandler_fn)onCrushPidKd);
 
 	Event_Subscribe(EVT_SYS_NUMPAD_MOD_PROFILE_CFG_CALIBER, (EventHandler_fn)onProfileCfgCaliber);
     

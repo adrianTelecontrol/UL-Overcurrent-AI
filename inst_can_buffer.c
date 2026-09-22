@@ -18,6 +18,14 @@
 
 #include <fatfs/src/ff.h>
 
+#define CAN_TX_QUEUE_SIZE 8U
+
+#if INST_TEMP_PID_ENABLE_INTEGRAL
+#define INST_TEMP_PID_APPLY_MESSAGE_COUNT 4U
+#else
+#define INST_TEMP_PID_APPLY_MESSAGE_COUNT 3U
+#endif
+
 static FIL g_cfgExportFile;
 static bool g_bIsReceivingCfg = false;
 static uint16_t g_ui16ExpectedCfgSize = 0;
@@ -29,10 +37,95 @@ static char g_szInstStatus[20] = "LISTO";
 static HAL_CAN_Msg_t g_CanRxQueue[CAN_RX_BUFFER_SIZE];
 static volatile uint16_t g_ui16Head = 0;
 static volatile uint16_t g_ui16Tail = 0;
+static HAL_CAN_Msg_t g_CanTxQueue[CAN_TX_QUEUE_SIZE];
+static uint8_t g_ui8TxHead = 0U;
+static uint8_t g_ui8TxTail = 0U;
+
+static uint8_t InstManager_TxQueueFree(void) {
+    return (uint8_t)((g_ui8TxTail - g_ui8TxHead - 1U) &
+                     (CAN_TX_QUEUE_SIZE - 1U));
+}
+
+static bool InstManager_QueueTx(const HAL_CAN_Msg_t *msg) {
+    uint8_t nextHead;
+
+    if (msg == NULL || msg->length > 8U) {
+        return false;
+    }
+
+    nextHead = (uint8_t)((g_ui8TxHead + 1U) & (CAN_TX_QUEUE_SIZE - 1U));
+    if (nextHead == g_ui8TxTail) {
+        return false;
+    }
+
+    g_CanTxQueue[g_ui8TxHead] = *msg;
+    g_ui8TxHead = nextHead;
+    return true;
+}
+
+static void InstManager_ProcessTxQueue(void) {
+    if (g_ui8TxTail == g_ui8TxHead || HAL_CAN_IsTxBusy()) {
+        return;
+    }
+
+    if (HAL_CAN_Transmit(&g_CanTxQueue[g_ui8TxTail])) {
+        g_ui8TxTail = (uint8_t)((g_ui8TxTail + 1U) &
+                                (CAN_TX_QUEUE_SIZE - 1U));
+    }
+}
+
+static HAL_CAN_Msg_t InstManager_CreateFloatMessage(uint32_t id, float value) {
+    HAL_CAN_Msg_t msg = {0};
+    msg.id = id;
+    msg.length = sizeof(float);
+    msg.isExtended = false;
+    memcpy(msg.data, &value, sizeof(float));
+    return msg;
+}
 
 void InstCanBuffer_Init(void) {
     g_ui16Head = 0;
     g_ui16Tail = 0;
+    g_ui8TxHead = 0U;
+    g_ui8TxTail = 0U;
+}
+
+bool InstManager_RequestTempPidValues(void) {
+    HAL_CAN_Msg_t msg = {0};
+    msg.id = CAN_ID_REQ_TEMP_PID_VALUES;
+    return InstManager_QueueTx(&msg);
+}
+
+bool InstManager_ApplyTempPidValues(const InstTempPidValues_t *values) {
+    HAL_CAN_Msg_t msg;
+
+    if (values == NULL ||
+        InstManager_TxQueueFree() < INST_TEMP_PID_APPLY_MESSAGE_COUNT) {
+        return false;
+    }
+
+    msg = InstManager_CreateFloatMessage(CAN_ID_REQ_TEMP_PID_SET_KP,
+                                         values->kp);
+    InstManager_QueueTx(&msg);
+#if INST_TEMP_PID_ENABLE_INTEGRAL
+    msg = InstManager_CreateFloatMessage(CAN_ID_REQ_TEMP_PID_SET_KI,
+                                         values->ki);
+    InstManager_QueueTx(&msg);
+#endif
+    msg = InstManager_CreateFloatMessage(CAN_ID_REQ_TEMP_PID_SET_KD,
+                                         values->kd);
+    InstManager_QueueTx(&msg);
+
+    memset(&msg, 0, sizeof(msg));
+    msg.id = CAN_ID_REQ_TEMP_PID_APPLY;
+    InstManager_QueueTx(&msg);
+    return true;
+}
+
+bool InstManager_RestoreTempPidDefaults(void) {
+    HAL_CAN_Msg_t msg = {0};
+    msg.id = CAN_ID_REQ_TEMP_PID_RESTORE_DEFAULTS;
+    return InstManager_QueueTx(&msg);
 }
 
 bool InstCanBuffer_Push(const HAL_CAN_Msg_t *msg) {
@@ -149,8 +242,8 @@ void InstManager_Task(void) {
                 Event_Post(EVT_CAN_INST_TC_CJC, (EventParam_t){.ui32 = msg.data[4]}); 
                 break;
 
-			case CAN_ID_INST_STATUS:
-				if(msg.length == 0) return;
+			case CAN_ID_INST_STATUS: {
+				if(msg.length == 0U) break;
 				
 				test_manager_state_t state = (test_manager_state_t)msg.data[0];
 				if(state == TEST_STATE_IDLE) 
@@ -164,12 +257,13 @@ void InstManager_Task(void) {
 
 				Event_Post(EVT_CAN_INST_STATE, ( EventParam_t ){.str = g_szInstStatus});
 				break;
+			}
             case CAN_ID_INST_HANDSHAKE_OK:
                 Event_Post(EVT_SYS_BOOT_HANDSHAKE_OK, (EventParam_t){.ptr = NULL});
                 break;
 
-            case CAN_ID_INST_SEND_CONFIG_FILE_START:
-				if(g_bIsReceivingCfg) break;
+            case CAN_ID_INST_SEND_CONFIG_FILE_START: {
+				if(g_bIsReceivingCfg || msg.length < 2U) break;
                 memcpy(&g_ui16ExpectedCfgSize, msg.data, 2);
                 g_ui16ReceivedBytes = 0;
                 g_ui16CalculatedChecksum = 0;
@@ -189,6 +283,7 @@ void InstManager_Task(void) {
                     Event_Post(EVT_SYS_CFG_EXPORT_ERROR, (EventParam_t){.ptr = NULL});
                 }
                 break;
+			}
 
             case CAN_ID_INST_SEND_CONFIG_FILE_BYTE:
                 if (g_bIsReceivingCfg) {
@@ -269,8 +364,34 @@ void InstManager_Task(void) {
 			case CAN_ID_ACK_FACTORY_RESET:
 				Event_Post(EVT_CAN_INST_ACK_FACTORY_RESET, ( EventParam_t ){.bool_ = msg.data[0]});
 			break;
-			case CAN_ID_ACK_SAVE_EEPROM:
+		case CAN_ID_ACK_SAVE_EEPROM:
 				Event_Post(EVT_CAN_INST_ACK_SAVE_EEPROM, ( EventParam_t ){.bool_ = msg.data[0]});
+			break;
+			case CAN_ID_INST_TEMP_PID_KP:
+				if (msg.length >= sizeof(float)) {
+					memcpy(&fVal, msg.data, sizeof(float));
+					Event_Post(EVT_CAN_INST_TEMP_PID_KP, (EventParam_t){.f32 = fVal});
+				}
+			break;
+			case CAN_ID_INST_TEMP_PID_KI:
+				if (msg.length >= sizeof(float)) {
+					memcpy(&fVal, msg.data, sizeof(float));
+					Event_Post(EVT_CAN_INST_TEMP_PID_KI, (EventParam_t){.f32 = fVal});
+				}
+			break;
+			case CAN_ID_INST_TEMP_PID_KD:
+				if (msg.length >= sizeof(float)) {
+					memcpy(&fVal, msg.data, sizeof(float));
+					Event_Post(EVT_CAN_INST_TEMP_PID_KD, (EventParam_t){.f32 = fVal});
+				}
+			break;
+			case CAN_ID_INST_TEMP_PID_APPLY_ACK:
+				Event_Post(EVT_CAN_INST_TEMP_PID_APPLY_ACK,
+				           (EventParam_t){.bool_ = msg.length > 0U && msg.data[0] != 0U});
+			break;
+			case CAN_ID_INST_TEMP_PID_DEFAULTS_ACK:
+				Event_Post(EVT_CAN_INST_TEMP_PID_DEFAULTS_ACK,
+				           (EventParam_t){.bool_ = msg.length > 0U && msg.data[0] != 0U});
 			break;
             default:
                 break;
@@ -310,6 +431,8 @@ void InstManager_Task(void) {
             HAL_CAN_Transmit(&txMsg);
         }
     }
+
+    InstManager_ProcessTxQueue();
 }
 
 

@@ -47,6 +47,14 @@ typedef enum {
 	CAN_ID_ACK_SAVE_EEPROM, // Respuesta del command SAVE EEPROM
 	CAN_ID_ACK_FACTORY_RESET, // Respuesta del comando FACTORY RESET
 
+	// Temperature controller PID responses. Float payloads use IEEE-754,
+	// little-endian byte order. ACK payload: data[0] = 1 on success.
+	CAN_ID_INST_TEMP_PID_KP = 0x310,
+	CAN_ID_INST_TEMP_PID_KI,
+	CAN_ID_INST_TEMP_PID_KD,
+	CAN_ID_INST_TEMP_PID_APPLY_ACK,
+	CAN_ID_INST_TEMP_PID_DEFAULTS_ACK,
+
 	// CAN messages to INSTRUMENTATION
 	CAN_ID_ASK_HANDSHAKE = 0x400,
 	CAN_ID_VOLTAGE_TX_PRIMARY_ADJ_LOW,
@@ -82,6 +90,15 @@ typedef enum {
 	CAN_ID_REQ_EMERGENCY_STOP,
 	CAN_ID_REQ_SAVE_EEPROM = 0x460,
 	CAN_ID_REQ_FACTORY_RESET,
+
+	// Temperature controller PID commands. SET messages stage one float value;
+	// APPLY commits all staged values. GET and RESTORE have empty payloads.
+	CAN_ID_REQ_TEMP_PID_VALUES = 0x470,
+	CAN_ID_REQ_TEMP_PID_SET_KP,
+	CAN_ID_REQ_TEMP_PID_SET_KI,
+	CAN_ID_REQ_TEMP_PID_SET_KD,
+	CAN_ID_REQ_TEMP_PID_APPLY,
+	CAN_ID_REQ_TEMP_PID_RESTORE_DEFAULTS,
 
 	
 	CAN_ID_LENGTH,

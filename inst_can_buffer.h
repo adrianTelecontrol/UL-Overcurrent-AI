@@ -7,6 +7,15 @@
 
 #define CAN_RX_BUFFER_SIZE 64 // Suficiente para ráfagas rápidas
 
+/* Set to 1U only when instrumentation firmware requires Ki configuration. */
+#define INST_TEMP_PID_ENABLE_INTEGRAL 0U
+
+typedef struct {
+    float kp;
+    float ki;
+    float kd;
+} InstTempPidValues_t;
+
 // Inicializa el búfer
 void InstCanBuffer_Init(void);
 
@@ -17,5 +26,9 @@ bool InstCanBuffer_Push(const HAL_CAN_Msg_t *msg);
 bool InstCanBuffer_Pop(HAL_CAN_Msg_t *outMsg);
 
 void InstManager_Task(void);
+
+bool InstManager_RequestTempPidValues(void);
+bool InstManager_ApplyTempPidValues(const InstTempPidValues_t *values);
+bool InstManager_RestoreTempPidDefaults(void);
 
 #endif
