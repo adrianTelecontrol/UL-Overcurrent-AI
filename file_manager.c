@@ -372,7 +372,6 @@ bool FM_FetchBDF(const uint8_t drive, const char *pcFilePath, BDF_Font_t *psFont
     psFont->firstChar = startChar;
     psFont->lastChar = endChar;
     psFont->poolSize = 0;
-    psFont->bitmapFormat = FONT_BITMAP_MONO_1BPP;
     
     uint32_t numChars = endChar - startChar + 1;
     psFont->glyphs = (BDF_Glyph_t *)calloc(numChars, sizeof(BDF_Glyph_t)); // calloc limpia con ceros automáticamente
