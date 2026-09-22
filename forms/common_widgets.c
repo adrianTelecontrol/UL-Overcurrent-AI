@@ -268,6 +268,11 @@ void initCommonWidgets(void) {
     gfx_initRegTouch(btnOptionsWidget.pvWidget, WD_TYPE_BUTTON);
 
 	FM_EVEImageRegistryReset(EVE_FREE_RAMG_START);
+	/* Keep the transparent logo in its previously working RAM_G slot. The
+	 * opaque boot asset is loaded first but is no longer drawn. */
+	if(!FM_LoadEVEImage(DRIVE_SD_ID, "logo_blk_corrected.png", NULL, 0, NULL)) {
+		TIVA_LOGE(TAG, "Fallo al cargar logo_blk_corrected.png en EVE");
+	}
 	tcLogoImgData = (gfx_Image) {
 		.name = "mainLogo",
 		.pos.x = 5,
