@@ -168,11 +168,30 @@ bool InstCanBuffer_Pop(HAL_CAN_Msg_t *outMsg) {
 static uint32_t g_ui32LastMessageTime = 0;
 static uint32_t g_ui32LastHandshakeTick = 0; // Temporizador para reintentos
 static bool g_bIsInstrumentSynced = false;
+static bool g_bReportedInstrumentSynced = false;
+
+static void InstManager_PublishSyncState(void) {
+    EventID_e event;
+
+    if (g_bReportedInstrumentSynced == g_bIsInstrumentSynced) {
+        return;
+    }
+
+    event = g_bIsInstrumentSynced ? EVT_SYS_INST_SYNC_RESTORED
+                                 : EVT_SYS_INST_UNSYNC;
+    /* A full event queue must not permanently lose a state transition. */
+    if (Event_Post(event, (EventParam_t){.ptr = NULL})) {
+        g_bReportedInstrumentSynced = g_bIsInstrumentSynced;
+    }
+}
 
 void InstManager_Task(void) {
     HAL_CAN_Msg_t msg;
     bool bReceivedInThisCycle = false;
     uint32_t currentMs = GetExecTimeMs();
+
+    /* Retry pending state before a new telemetry batch can fill the queue. */
+    InstManager_PublishSyncState();
     
     // 1. Procesar todos los mensajes entrantes (Extracción Rápida)
     while (InstCanBuffer_Pop(&msg)) {
@@ -404,16 +423,16 @@ void InstManager_Task(void) {
         
         if (!g_bIsInstrumentSynced) {
             g_bIsInstrumentSynced = true;
-            Event_Post(EVT_SYS_INST_SYNC_RESTORED, (EventParam_t){.ptr = NULL}); 
         }
     } else {
         if (g_bIsInstrumentSynced) {
             if ((currentMs - g_ui32LastMessageTime) >= 5000) {
                 g_bIsInstrumentSynced = false; 
-                Event_Post(EVT_SYS_INST_UNSYNC, (EventParam_t){.ptr = NULL});
             }
         }
     }
+
+    InstManager_PublishSyncState();
 
     // 3. Lógica de Auto-Recuperación (Transmisión del Handshake)
     if (!g_bIsInstrumentSynced) {
